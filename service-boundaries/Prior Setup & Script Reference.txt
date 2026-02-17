@@ -1,0 +1,98 @@
+* Prior Steps:
+
+1. Connect to PostgreSQL Shell
+-----------------------------------
+
+Windows -> Search -> SQL Shell (psql) -> open
+
+Server [localhost]: localhost
+Database [postgres]:
+Port [5432]: 5432
+Username [postgres]: postgres
+Password for user postgres:
+
+psql (18.3)
+WARNING: Console code page (437) differs from Windows code page (1252)
+         8-bit characters might not work correctly. See psql reference
+         page "Notes for Windows users" for details.
+Type "help" for help.
+
+
+2. SETUP ~ Create Database per microservice
+(Run below queries before starting resp. service)
+--------------------------------------------
+
+--Product Service
+CREATE DATABASE product_db;
+
+--Inventory Service
+CREATE DATABASE inventory_db;
+CREATE DATABASE inventory_test_db;
+
+
+
+* Queries/Script for reference: (Refer this once resp. service is UP)
+
+~ Product Service : product_db — run these after product-service starts
+------------------------------------------------------
+
+-- Verify Flyway ran successfully
+SELECT * FROM flyway_schema_history;
+
+-- Verify table structure
+\d products
+
+-- See all products
+SELECT id, name, price, category, status, created_at, updated_at
+FROM products
+ORDER BY created_at DESC;
+
+-- See only active products
+SELECT id, name, price, category
+FROM products
+WHERE status = 'ACTIVE';
+
+-- Verify the CHECK constraint on status works
+-- This should fail with: violates check constraint "products_status_check"
+INSERT INTO products (id, name, price, status, created_at, updated_at)
+VALUES (gen_random_uuid(), 'Test', 9.99, 'INVALID', now(), now());
+
+
+
+~ Inventory Service : inventory_db — run these after inventory-service starts
+----------------------------------------------------------
+
+-- Verify Flyway ran successfully
+SELECT * FROM flyway_schema_history;
+
+-- Verify table structure
+\d inventories
+
+-- See all inventory records
+SELECT id, product_id, available_quantity, reserved_quantity, version, updated_at
+FROM inventories
+ORDER BY updated_at DESC;
+
+-- Watch version increment in real time — run this before and after a reserve call
+SELECT product_id, available_quantity, reserved_quantity, version
+FROM inventories
+WHERE product_id = '<your-product-uuid-here>';
+
+-- Verify the CHECK constraint on available_quantity works
+-- This should fail with: violates check constraint "inventories_available_quantity_check"
+UPDATE inventories
+SET available_quantity = -1
+WHERE product_id = '<your-product-uuid-here>';
+
+-- Verify UNIQUE constraint on product_id works
+-- This should fail with: duplicate key value violates unique constraint
+INSERT INTO inventories (id, product_id, available_quantity, version, updated_at)
+VALUES (gen_random_uuid(), '<existing-product-uuid>', 10, 0, now());
+
+-- See total physical stock per product (available + reserved)
+SELECT product_id,
+       available_quantity,
+       reserved_quantity,
+       available_quantity + reserved_quantity AS total_physical_stock,
+       version
+FROM inventories;

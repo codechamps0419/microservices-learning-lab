@@ -1,0 +1,895 @@
+{
+  "info": {
+    "_postman_id": "e6a6ef2d-236c-4cee-8b5d-9128477ead32",
+    "name": "service-boundaries",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "48418049"
+  },
+  "item": [
+    {
+      "name": "product-service",
+      "item": [
+        {
+          "name": "01 Create Product (valid)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('Has UUID id', () => pm.expect(json.id).to.match(/^[0-9a-f-]{36}$/));",
+                  "pm.test('Status is ACTIVE', () => pm.expect(json.status).to.eql('ACTIVE'));",
+                  "pm.collectionVariables.set('product_id', json.id);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Wireless Keyboard\",\n  \"description\": \"Compact wireless keyboard with USB receiver\",\n  \"price\": 49.99,\n  \"category\": \"Electronics\"\n}"
+            },
+            "url": {
+              "raw": "{{product_base}}products",
+              "host": [
+                "{{product_base}}products"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "02 Create Product (duplicate name → 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Has conflict message', () => pm.expect(pm.response.json().message).to.include('already exists'));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Wireless Keyboard\",\n  \"price\": 29.99\n}"
+            },
+            "url": {
+              "raw": "{{product_base}}products",
+              "host": [
+                "{{product_base}}products"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "03 Create Product (missing name → 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Has errors object', () => pm.expect(pm.response.json()).to.have.property('errors'));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 49.99\n}"
+            },
+            "url": {
+              "raw": "{{product_base}}products",
+              "host": [
+                "{{product_base}}products"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "04 Create Product (price zero → 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Free Product\",\n  \"price\": 0.00\n}"
+            },
+            "url": {
+              "raw": "{{product_base}}products",
+              "host": [
+                "{{product_base}}products"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "05 Create Second Product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('product_id_2', pm.response.json().id);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"USB-C Hub\",\n  \"description\": \"7-in-1 USB-C hub\",\n  \"price\": 34.99,\n  \"category\": \"Electronics\"\n}"
+            },
+            "url": {
+              "raw": "{{product_base}}products",
+              "host": [
+                "{{product_base}}products"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "06 Get Product by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('ID matches', () => pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('product_id')));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "packages": {},
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{product_base}}products/d0633d9f-acf3-481d-93a3-a7186bf55cf6",
+              "host": [
+                "{{product_base}}products"
+              ],
+              "path": [
+                "d0633d9f-acf3-481d-93a3-a7186bf55cf6"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "07 Get Product (not found → 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{product_base}}products/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{product_base}}products"
+              ],
+              "path": [
+                "00000000-0000-0000-0000-000000000000"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "08 Search All Active Products",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{product_base}}products",
+              "host": [
+                "{{product_base}}products"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "09 Search by Category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{product_base}}products?category=Electronics",
+              "host": [
+                "{{product_base}}products"
+              ],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "Electronics"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "10 Search by Name Fragment",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{product_base}}products?name=keyboard",
+              "host": [
+                "{{product_base}}products"
+              ],
+              "query": [
+                {
+                  "key": "name",
+                  "value": "keyboard"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "11 Update Product (PUT)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Name updated', () => pm.expect(pm.response.json().name).to.eql('Wireless Keyboard Pro'));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Wireless Keyboard Pro\",\n  \"description\": \"Updated with USB-C receiver\",\n  \"price\": 59.99,\n  \"category\": \"Electronics\"\n}"
+            },
+            "url": {
+              "raw": "{{product_base}}products/d0633d9f-acf3-481d-93a3-a7186bf55cf6",
+              "host": [
+                "{{product_base}}products"
+              ],
+              "path": [
+                "d0633d9f-acf3-481d-93a3-a7186bf55cf6"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "12 Update Price (PATCH)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Price updated', () => pm.expect(pm.response.json().price).to.eql(44.99));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 44.99\n}"
+            },
+            "url": {
+              "raw": "{{product_base}}products/d0633d9f-acf3-481d-93a3-a7186bf55cf6/price",
+              "host": [
+                "{{product_base}}products"
+              ],
+              "path": [
+                "d0633d9f-acf3-481d-93a3-a7186bf55cf6",
+                "price"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "13 Deactivate Product (PATCH status)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Status is INACTIVE', () => pm.expect(pm.response.json().status).to.eql('INACTIVE'));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"INACTIVE\"\n}"
+            },
+            "url": {
+              "raw": "{{product_base}}products/d0633d9f-acf3-481d-93a3-a7186bf55cf6/status",
+              "host": [
+                "{{product_base}}products"
+              ],
+              "path": [
+                "d0633d9f-acf3-481d-93a3-a7186bf55cf6",
+                "status"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "14 Search — INACTIVE product not in results",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const ids = pm.response.json().map(p => p.id);",
+                  "pm.test('Inactive product excluded', () => pm.expect(ids).to.not.include(pm.collectionVariables.get('product_id')));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{product_base}}products",
+              "host": [
+                "{{product_base}}products"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "15 Reactivate Product",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ACTIVE\"\n}"
+            },
+            "url": {
+              "raw": "{{product_base}}products/d0633d9f-acf3-481d-93a3-a7186bf55cf6/status",
+              "host": [
+                "{{product_base}}products"
+              ],
+              "path": [
+                "d0633d9f-acf3-481d-93a3-a7186bf55cf6",
+                "status"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "16 Invalid Status Value → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"DELETED\"\n}"
+            },
+            "url": {
+              "raw": "{{product_base}}products/d0633d9f-acf3-481d-93a3-a7186bf55cf6/status",
+              "host": [
+                "{{product_base}}products"
+              ],
+              "path": [
+                "d0633d9f-acf3-481d-93a3-a7186bf55cf6",
+                "status"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "inventory-service",
+      "item": [
+        {
+          "name": "01 Add Stock (new product)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('Available is 100', () => pm.expect(json.availableQuantity).to.eql(100));",
+                  "pm.test('Reserved is 0', () => pm.expect(json.reservedQuantity).to.eql(0));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"e5fbbfb8-f7e3-450c-a01d-33cb3e45923c\",\n  \"quantity\": 100\n}"
+            },
+            "url": {
+              "raw": "{{inventory_base}}inventories",
+              "host": [
+                "{{inventory_base}}inventories"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "02 Restock (add more to existing)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Available is 150', () => pm.expect(pm.response.json().availableQuantity).to.eql(150));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"e5fbbfb8-f7e3-450c-a01d-33cb3e45923c\",\n  \"quantity\": 50\n}"
+            },
+            "url": {
+              "raw": "{{inventory_base}}inventories",
+              "host": [
+                "{{inventory_base}}inventories"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "03 Get Stock by Product ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has availableQuantity', () => pm.expect(pm.response.json()).to.have.property('availableQuantity'));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{inventory_base}}inventories/e5fbbfb8-f7e3-450c-a01d-33cb3e45923c",
+              "host": [
+                "{{inventory_base}}inventories"
+              ],
+              "path": [
+                "e5fbbfb8-f7e3-450c-a01d-33cb3e45923c"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "04 Reserve Stock",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Available decreased', () => pm.expect(json.availableQuantity).to.eql(140));",
+                  "pm.test('Reserved increased', () => pm.expect(json.reservedQuantity).to.eql(10));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 10\n}"
+            },
+            "url": {
+              "raw": "{{inventory_base}}inventories/e5fbbfb8-f7e3-450c-a01d-33cb3e45923c/reserve",
+              "host": [
+                "{{inventory_base}}inventories"
+              ],
+              "path": [
+                "e5fbbfb8-f7e3-450c-a01d-33cb3e45923c",
+                "reserve"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "05 Reserve Stock (insufficient → 422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 9999\n}"
+            },
+            "url": {
+              "raw": "{{inventory_base}}inventories/e5fbbfb8-f7e3-450c-a01d-33cb3e45923c/reserve",
+              "host": [
+                "{{inventory_base}}inventories"
+              ],
+              "path": [
+                "e5fbbfb8-f7e3-450c-a01d-33cb3e45923c",
+                "reserve"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "06 Release Stock",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Available restored', () => pm.expect(json.availableQuantity).to.eql(145));",
+                  "pm.test('Reserved decreased', () => pm.expect(json.reservedQuantity).to.eql(5));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 5\n}"
+            },
+            "url": {
+              "raw": "{{inventory_base}}inventories/e5fbbfb8-f7e3-450c-a01d-33cb3e45923c/release",
+              "host": [
+                "{{inventory_base}}inventories"
+              ],
+              "path": [
+                "e5fbbfb8-f7e3-450c-a01d-33cb3e45923c",
+                "release"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "07 Confirm Stock (deduct reserved)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Reserved cleared', () => pm.expect(json.reservedQuantity).to.eql(0));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 5\n}"
+            },
+            "url": {
+              "raw": "{{inventory_base}}inventories/e5fbbfb8-f7e3-450c-a01d-33cb3e45923c/confirm",
+              "host": [
+                "{{inventory_base}}inventories"
+              ],
+              "path": [
+                "e5fbbfb8-f7e3-450c-a01d-33cb3e45923c",
+                "confirm"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "08 Get Stock (not found → 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{inventory_base}}inventories/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{inventory_base}}inventories"
+              ],
+              "path": [
+                "00000000-0000-0000-0000-000000000000"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "product_base",
+      "value": "http://localhost:8081/api/"
+    },
+    {
+      "key": "inventory_base",
+      "value": "http://localhost:8082/api/"
+    },
+    {
+      "key": "product_id",
+      "value": ""
+    },
+    {
+      "key": "product_id_2",
+      "value": ""
+    }
+  ]
+}

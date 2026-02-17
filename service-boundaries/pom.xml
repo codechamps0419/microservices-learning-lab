@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+             https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.example</groupId>
+    <artifactId>service-boundaries</artifactId>
+    <version>1.0.0</version>
+
+    <!--
+        packaging=pom means this module produces no JAR.
+        Its only job is to declare shared configuration and list child modules.
+    -->
+    <packaging>pom</packaging>
+
+    <modules>
+        <module>product-service</module>
+        <module>inventory-service</module>
+    </modules>
+
+    <!--
+        Inheriting from spring-boot-starter-parent gives us:
+        - Managed versions for every Spring Boot dependency.
+          Child POMs declare dependencies with no version tag.
+          The parent resolves the correct compatible version.
+        - Default configuration for spring-boot-maven-plugin.
+        - Sensible compiler, encoding and resource filtering defaults.
+    -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.3.0</version>
+        <relativePath/>
+    </parent>
+
+    <properties>
+        <!--
+            Your JDK is Java 25. We target Java 21 bytecode for compatibility.
+            Java 21+ requires Lombok to be declared as an annotation processor
+            explicitly in the compiler plugin — see child POMs.
+        -->
+        <java.version>21</java.version>
+        <lombok.version>1.18.38</lombok.version>
+    </properties>
+
+</project>

@@ -1,0 +1,66 @@
+server:
+  port: 8081
+  # All endpoints will be prefixed with /api
+  # e.g. /api/products, /api/products/{id}
+  # Defined here so the prefix is consistent across all controllers
+  # without repeating it in every @RequestMapping annotation.
+  servlet:
+    context-path: /api
+
+spring:
+  application:
+    # Used in logs and monitoring tools to identify this service.
+    # Keep it lowercase-hyphenated — consistent with Spring Boot conventions.
+    name: product-service
+
+  datasource:
+    # JDBC URL format: jdbc:postgresql://{host}:{port}/{database}
+    # product_db must be created manually in PostgreSQL before first startup.
+    # Command: CREATE DATABASE product_db;
+    url: jdbc:postgresql://localhost:5432/product_db
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    # IMPORTANT: ddl-auto=validate tells Hibernate to check that the entity
+    # mappings match the existing schema, but make NO changes to the schema.
+    # Flyway is responsible for all schema changes.
+    #
+    # NEVER use ddl-auto=create or ddl-auto=create-drop in production.
+    # create      — drops and recreates all tables on every startup (data loss)
+    # create-drop — drops all tables on shutdown (data loss)
+    # update      — tries to alter tables but misses many cases and is unreliable
+    # validate    — safe: verifies schema matches entities, throws on mismatch
+    # none        — does nothing (use this if you want zero JPA schema involvement)
+    hibernate:
+      ddl-auto: validate
+
+    # Logs every SQL statement Hibernate executes.
+    # Invaluable during development to verify queries, detect N+1 problems,
+    # and understand what JPA is doing under the hood.
+    # Set to false in production — SQL logs are verbose and expose schema details.
+    show-sql: true
+
+    properties:
+      hibernate:
+        # Formats the SQL output across multiple lines for readability.
+        # Only meaningful when show-sql is true.
+        format_sql: true
+
+        # Tells Hibernate we are using PostgreSQL.
+        # Without this, Hibernate auto-detects the dialect but explicit
+        # configuration avoids startup warnings and ensures correct SQL generation.
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  flyway:
+    # Flyway is enabled by default when flyway-core is on the classpath.
+    # Explicit true makes the intent clear to anyone reading this file.
+    enabled: true
+
+    # Location of migration scripts.
+    # classpath:db/migration maps to src/main/resources/db/migration.
+    locations: classpath:db/migration
+
+    # Flyway will create the flyway_schema_history table automatically
+    # on first run if it does not exist. No manual setup needed.
