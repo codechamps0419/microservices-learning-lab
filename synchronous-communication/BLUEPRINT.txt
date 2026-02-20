@@ -1,0 +1,777 @@
+================================================================================
+  PROJECT  : synchronous-communication
+  SCENARIO : E-Commerce System — Order Placement Flow
+  SERVICES : product-service (:8081) | inventory-service (:8082) | order-service (:8083)
+  STACK    : Java 21, Spring Boot 3, Maven, PostgreSQL, Flyway, RestClient
+================================================================================
+
+
+--------------------------------------------------------------------------------
+1. ARCHITECTURE
+--------------------------------------------------------------------------------
+
++---------------------------------------------------------------------------------+
+|              synchronous-communication  (Single IntelliJ Project)               |
+|                                                                                 |
+|  +---------------------+   +----------------------+   +----------------------+  |
+|  |   product-service   |   |  inventory-service   |   |    order-service     |  |
+|  |       :8081         |   |        :8082         |   |        :8083         |  |
+|  |                     |   |                      |   |                      |  |
+|  |  +--------------+   |   |  +---------------+   |   |  +---------------+   |  |
+|  |  |  product_db  |   |   |  | inventory_db  |   |   |  |   order_db    |   |  |
+|  |  | (PostgreSQL) |   |   |  | (PostgreSQL)  |   |   |  | (PostgreSQL)  |   |  |
+|  |  +--------------+   |   |  +---------------+   |   |  +---------------+   |  |
+|  +---------------------+   +----------------------+   +----------------------+  |
+|           ^                          ^                          |               |
+|           |   GET /api/products/{id} |                          |               |
+|           +──────────────────────────┼──────────────────────────+               |
+|                                      |   POST /api/inventories/{id}/reserve     |
+|                                      +──────────────────────────────────────────+
+|                                                                                 |
+|  order-service calls product-service and inventory-service via RestClient.      |
+|  No service touches another service's database.                                 |
++---------------------------------------------------------------------------------+
+
+
+DATA OWNERSHIP RULES:
+---------------------
+  Service              Owns           Rule
+  -------------------  -------------  ------------------------------------------
+  product-service      product_db     No other service reads or writes it
+  inventory-service    inventory_db   No other service reads or writes it
+  order-service        order_db       Stores productId + productName snapshot.
+                                      Never imports Product entity.
+                                      Never accesses InventoryRepository.
+
+
+ARCHITECTURE RULES:
+-------------------
+  1. Product Service owns product_db exclusively.
+  2. Inventory Service owns inventory_db exclusively.
+  3. Order Service owns order_db exclusively.
+  4. No service may access another service's database.
+  5. Order Service stores productId and a productName snapshot.
+  6. Order Service must not store or import the Product entity.
+  7. Order Service must not access InventoryRepository.
+  8. Services communicate only through REST APIs.
+  9. Keep optimistic locking in Inventory Service (@Version).
+ 10. Do not add retry, circuit breaker, Kafka, Gateway, Eureka, Redis,
+     Saga framework, security or Docker.
+
+
+--------------------------------------------------------------------------------
+2. REUSED COMPONENTS FROM PROJECT 1 (service-boundaries)
+--------------------------------------------------------------------------------
+
+These files are copied as-is. Zero changes needed.
+
+  product-service — fully reused:
+  --------------------------------
+  - Product.java                    entity
+  - ProductStatus.java              enum: ACTIVE, INACTIVE
+  - ProductRepository.java
+  - ProductService.java
+  - ProductController.java          GET /api/products/{id} is called by order-service
+  - CreateProductRequest.java
+  - UpdateProductRequest.java
+  - PriceUpdateRequest.java
+  - StatusUpdateRequest.java
+  - ProductResponse.java
+  - ProductNotFoundException.java
+  - DuplicateProductNameException.java
+  - GlobalExceptionHandler.java
+  - V1__create_products_table.sql
+  - application.yml                 port 8081, product_db
+
+  inventory-service — fully reused:
+  -----------------------------------
+  - Inventory.java                  entity with @Version (optimistic locking stays)
+  - InventoryRepository.java
+  - InventoryService.java           reserveStock() and releaseStock() are triggered
+                                    by order-service via HTTP
+  - InventoryController.java        POST /api/inventories/{productId}/reserve
+                                    POST /api/inventories/{productId}/release
+  - AddStockRequest.java
+  - ReserveStockRequest.java
+  - StockResponse.java
+  - InventoryNotFoundException.java
+  - InsufficientStockException.java
+  - GlobalExceptionHandler.java
+  - V1__create_inventories_table.sql
+  - application.yml                 port 8082, inventory_db
+
+
+--------------------------------------------------------------------------------
+3. NEW COMPONENTS — order-service
+--------------------------------------------------------------------------------
+
+Package root: com.example.order
+
+  Layer        File                                  Purpose
+  -----------  ------------------------------------  ------------------------------------
+  Application  OrderServiceApplication.java          Spring Boot entry point
+  Domain       Order.java                            JPA entity — owns order_db
+  Domain       OrderStatus.java                      Enum: PENDING, CONFIRMED, REJECTED
+  Repository   OrderRepository.java                  Spring Data JPA for Order
+  DTO          CreateOrderRequest.java               Incoming: productId + quantity
+  DTO          OrderResponse.java                    Outgoing: full order details
+  DTO          ProductClientResponse.java            Maps product-service JSON response
+  DTO          StockClientResponse.java              Maps inventory-service JSON response
+  DTO          ErrorResponse.java                    Consistent error shape for all errors
+  Client       ProductClient.java                    RestClient wrapper for product-service
+  Client       InventoryClient.java                  RestClient wrapper for inventory-service
+  Config       RestClientConfig.java                 Builds RestClient beans with timeouts
+  Config       OpenApiConfig.java                    Springdoc bean + X-Correlation-ID header
+  Service      OrderService.java                     Orchestrates the full business flow
+  Controller   OrderController.java                  POST /api/orders with OpenAPI annotations
+  Filter       CorrelationIdFilter.java              Reads/generates X-Correlation-ID, MDC
+  Exception    InactiveProductException.java         Product status != ACTIVE -> 422
+  Exception    ProductNotFoundException.java         Product not found -> 404
+  Exception    ProductServiceException.java          product-service 5xx -> 502
+  Exception    ProductServiceUnavailableException.java  product-service down -> 503
+  Exception    InventoryNotFoundException.java       No inventory record -> 422
+  Exception    InsufficientStockException.java       Not enough stock -> 422
+  Exception    InventoryConflictException.java       Concurrent conflict -> 409
+  Exception    InventoryValidationException.java     inventory-service 422 (other) -> 422
+  Exception    InventoryServiceException.java        inventory-service 5xx -> 502
+  Exception    InventoryServiceUnavailableException.java  inventory-service down -> 503
+  Exception    GlobalExceptionHandler.java           Maps all 10 typed exceptions to HTTP
+  Migration    V1__create_orders_table.sql           Creates orders table in order_db
+  Config       application.yml                       Port 8083, order_db, timeouts, URLs
+  Test Config  application-test.yml                  H2 in-memory, port 0, Flyway enabled
+
+
+--------------------------------------------------------------------------------
+4. DATABASE TABLE — order_db
+--------------------------------------------------------------------------------
+
+  order_db — table: orders
+  +------------------+---------------+---------------------------------------+
+  | Column           | Type          | Constraint / Notes                    |
+  +------------------+---------------+---------------------------------------+
+  | id               | UUID          | PRIMARY KEY                           |
+  | product_id       | UUID          | NOT NULL — reference by ID only       |
+  |                  |               | NO foreign key to product_db          |
+  | product_name     | VARCHAR(255)  | NOT NULL — snapshot at order time     |
+  | quantity         | INTEGER       | NOT NULL, CHECK > 0                   |
+  | unit_price       | NUMERIC(10,2) | NOT NULL — snapshot at order time     |
+  | total_price      | NUMERIC(12,2) | NOT NULL                              |
+  | status           | VARCHAR(20)   | NOT NULL, DEFAULT 'PENDING'           |
+  |                  |               | CHECK IN ('PENDING','CONFIRMED',      |
+  |                  |               |           'REJECTED')                 |
+  | correlation_id   | VARCHAR(100)  | nullable — for traceability           |
+  | created_at       | TIMESTAMP     | NOT NULL                              |
+  | updated_at       | TIMESTAMP     | NOT NULL                              |
+  +------------------+---------------+---------------------------------------+
+
+  KEY DESIGN DECISIONS:
+  - product_id has NO foreign key to product_db. Services are independent.
+  - product_name is a snapshot — captures the name at order time.
+    If the product is renamed later, the order history stays correct.
+  - unit_price is a snapshot — captures the price at order time.
+    If the price changes later, the order total is still accurate.
+  - No @Version on Order — orders are not concurrently updated after creation.
+  - total_price uses NUMERIC(12,2) — two digits wider than unit_price to
+    accommodate large order totals (quantity x price).
+  - status defaults to PENDING — orders start as PENDING and move to
+    CONFIRMED or REJECTED after downstream validation completes.
+  - updated_at is included — status transitions (PENDING -> CONFIRMED/REJECTED)
+    update this column via @PreUpdate.
+
+
+--------------------------------------------------------------------------------
+5. API CONTRACTS
+--------------------------------------------------------------------------------
+
+  order-service exposes:
+  ----------------------
+
+  POST /api/orders
+    Request body:
+      {
+        "productId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "quantity": 2
+      }
+
+    Response 201 Created:
+      {
+        "orderId":     "f1e2d3c4-b5a6-7890-abcd-123456789abc",
+        "productId":   "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "productName": "Wireless Keyboard",
+        "quantity":    2,
+        "unitPrice":   49.99,
+        "totalPrice":  99.98,
+        "status":      "CONFIRMED",
+        "correlationId": "req-uuid-here",
+        "createdAt":   "2024-01-15T10:30:00"
+      }
+
+  GET /api/orders/{orderId}
+    Response 200 OK — same shape as above.
+
+  -----------------------------------------------------------------------
+
+  order-service calls (existing endpoints — no changes to those services):
+  -------------------------------------------------------------------------
+
+  Method  Endpoint                                          Why
+  ------  ------------------------------------------------  ----------------------
+  GET     http://localhost:8081/api/products/{productId}    Fetch name, price, status
+  POST    http://localhost:8082/api/inventories             Reserve stock
+          /{productId}/reserve
+  POST    http://localhost:8082/api/inventories             Release stock on failure
+          /{productId}/release
+
+  -----------------------------------------------------------------------
+
+  Consistent error response shape (all three services):
+  ------------------------------------------------------
+  {
+    "timestamp":     "2024-01-15T10:30:00",
+    "status":        422,
+    "error":         "Unprocessable Entity",
+    "message":       "Insufficient stock for the requested quantity",
+    "correlationId": "req-uuid-here"
+  }
+
+  correlationId is NEW in Project 2 — added to every error response
+  so the caller can trace the request across service logs.
+
+
+--------------------------------------------------------------------------------
+6. SEQUENCE FLOW
+--------------------------------------------------------------------------------
+
+  Client
+    |
+    |  POST /api/orders  { productId, quantity }
+    |  Header: X-Correlation-ID: <id>  (optional)
+    v
+  CorrelationIdFilter
+    |  Read X-Correlation-ID header. If absent, generate UUID.
+    |  Store in MDC. Forward on all outgoing calls.
+    v
+  OrderController
+    |  @Valid — rejects missing productId, quantity < 1
+    v
+  OrderService
+    |
+    +-- Step 1: ProductClient.getProduct(productId)
+    |           GET http://localhost:8081/api/products/{productId}
+    |           <- ProductClientResponse { id, name, price, status }
+    |           if 404 -> RemoteServiceException -> 404
+    |           if timeout -> RemoteServiceException -> 503
+    |
+    +-- Step 2: Validate product.status == ACTIVE
+    |           if INACTIVE -> ProductNotActiveException -> 422
+    |
+    +-- Step 3: InventoryClient.reserveStock(productId, quantity)
+    |           POST http://localhost:8082/api/inventories/{productId}/reserve
+    |           <- StockClientResponse { availableQuantity, reservedQuantity }
+    |           if 404 -> RemoteServiceException -> 422 (no inventory record)
+    |           if 422 -> RemoteServiceException -> 422 (insufficient stock)
+    |           if 409 -> RemoteServiceException -> 409 (concurrent conflict)
+    |           if timeout -> RemoteServiceException -> 503
+    |
+    +-- Step 4: Calculate totalPrice = product.price x quantity
+    |
+    +-- Step 5: Build Order entity and save to order_db
+    |           stores: productId, productName (snapshot), quantity,
+    |                   unitPrice (snapshot), totalPrice, status=CONFIRMED
+    |
+    +-- Step 5a (compensation — only if Step 5 fails):
+    |           InventoryClient.releaseStock(productId, quantity)
+    |           POST http://localhost:8082/api/inventories/{productId}/release
+    |           Stock was reserved but order could not be saved — release it back.
+    |
+    +-- Step 6: Return OrderResponse -> 201 Created
+
+
+--------------------------------------------------------------------------------
+7. ERROR MAPPING STRATEGY
+--------------------------------------------------------------------------------
+
+  Scenario                      Downstream response        order-service returns
+  ----------------------------  -------------------------  ---------------------
+  Product not found             product-service 404        404 Not Found
+  Product is INACTIVE           (detected locally)         422 Unprocessable Entity
+  No inventory record           inventory-service 404      422 Unprocessable Entity
+  Insufficient stock            inventory-service 422      422 Unprocessable Entity
+  Concurrent stock conflict     inventory-service 409      409 Conflict
+  product-service is down       connection timeout         503 Service Unavailable
+  inventory-service is down     connection timeout         503 Service Unavailable
+  Request validation fails      (local @Valid)             400 Bad Request
+  Order not found               (local)                    404 Not Found
+  Order save fails              (local DB error)           500 + compensation triggered
+
+  KEY PRINCIPLE:
+  order-service's GlobalExceptionHandler catches RemoteServiceException and maps
+  it to the appropriate HTTP status. The error message is translated into
+  order-service's own language — never leaking internal service names or stack
+  traces to the client.
+
+
+--------------------------------------------------------------------------------
+8. CORRELATION ID FLOW
+--------------------------------------------------------------------------------
+
+  A correlation ID is a unique identifier attached to every request so you can
+  trace it across all three services in the logs.
+
+  Client sends:
+    POST /api/orders
+    Header: X-Correlation-ID: my-client-id-123   <- optional, client may send it
+
+  CorrelationIdFilter in order-service:
+    1. Read X-Correlation-ID header from incoming request
+    2. If absent -> generate a new UUID
+    3. Store in MDC (Mapped Diagnostic Context) — available in all log lines
+    4. Forward the same ID in all outgoing RestClient calls as X-Correlation-ID
+
+  ProductClient outgoing call:
+    GET http://localhost:8081/api/products/{id}
+    Header: X-Correlation-ID: my-client-id-123   <- forwarded
+
+  InventoryClient outgoing call:
+    POST http://localhost:8082/api/inventories/{id}/reserve
+    Header: X-Correlation-ID: my-client-id-123   <- forwarded
+
+  order-service response:
+    Header: X-Correlation-ID: my-client-id-123   <- echoed back
+    Body: { ..., "correlationId": "my-client-id-123" }  <- also in body
+
+  WHY THIS MATTERS:
+  When something goes wrong, you search all three service logs for the same
+  correlation ID and see the exact chain of calls that led to the failure —
+  without guessing.
+
+  IMPLEMENTATION:
+  CorrelationIdFilter implements OncePerRequestFilter.
+  Uses MDC.put("correlationId", id) so every log line automatically includes
+  the ID when the log pattern includes %X{correlationId}.
+
+
+--------------------------------------------------------------------------------
+9. DEVELOPMENT PHASES
+--------------------------------------------------------------------------------
+
+  Phase 1 — order-service Foundation                              [COMPLETED]
+  ------------------------------------
+  Goal: Service starts, Flyway creates the orders table, no errors.
+
+  Files created:
+  - pom.xml (parent)             new parent for synchronous-communication,
+                                 registers product-service, inventory-service,
+                                 order-service as modules
+  - product-service/pom.xml      updated parent reference
+  - inventory-service/pom.xml    updated parent reference
+  - order-service/pom.xml        all required dependencies
+  - OrderServiceApplication.java
+  - Order.java                   entity — productId, productName snapshot,
+                                 quantity, unitPrice snapshot, totalPrice,
+                                 status, correlationId, createdAt, updatedAt
+  - OrderStatus.java             enum: PENDING, CONFIRMED, REJECTED
+  - OrderRepository.java         findByProductId(), findByStatus()
+  - CreateOrderRequest.java      @NotNull productId, @Min(1) quantity
+  - OrderResponse.java           static factory from Order entity
+  - V1__create_orders_table.sql  orders table with CHECK constraints and indexes
+  - application.yml              port 8083, order_db, service URLs, MDC log pattern
+
+  NOTE: CreateOrderRequest and OrderResponse were built in Phase 1 alongside
+  the domain layer. They have no dependency on clients or remote calls and
+  are needed to verify the full persistence round-trip in Phase 1 tests.
+
+  -----------------------------------------------------------------------
+
+  Phase 2 — Client DTOs                                          [COMPLETED]
+  ----------------------
+  Goal: Define the DTOs order-service uses to deserialise responses from
+        product-service and inventory-service. No remote calls yet.
+
+  Files created:
+  - ProductClientResponse.java   id, name, price, status (as String — not enum)
+                                 Only fields order-service needs.
+  - StockClientResponse.java     productId, availableQuantity, reservedQuantity
+                                 Only fields order-service needs.
+
+  NOTE: CreateOrderRequest and OrderResponse are already done in Phase 1.
+
+  -----------------------------------------------------------------------
+
+  Phase 3 — RestClient Configuration and Clients                  [COMPLETED]
+  -----------------------------------------------
+  Goal: RestClient beans configured with timeouts. ProductClient and
+        InventoryClient can make real HTTP calls.
+
+  Files created:
+  - RestClientConfig.java        two RestClient beans (productRestClient,
+                                 inventoryRestClient) with connection timeout
+                                 and read timeout via SimpleClientHttpRequestFactory.
+                                 Base URLs and timeout values read from application.yml.
+  - ProductClient.java           getProduct(UUID productId)
+                                 GET /api/products/{productId}
+                                 Error mapping:
+                                   404 -> ProductNotFoundException
+                                   500 -> ProductServiceException
+                                   503 -> ProductServiceUnavailableException
+                                   timeout -> ProductServiceUnavailableException
+  - InventoryClient.java         reserveStock(UUID productId, int quantity)
+                                 POST /api/inventories/{productId}/reserve
+                                 releaseStock(UUID productId, int quantity)
+                                 POST /api/inventories/{productId}/release
+                                 Error mapping:
+                                   404 -> InventoryNotFoundException
+                                   409 -> InventoryConflictException
+                                   422 -> InsufficientStockException
+                                        | InventoryValidationException
+                                   500 -> InventoryServiceException
+                                   503 -> InventoryServiceUnavailableException
+                                   timeout -> InventoryServiceUnavailableException
+                                 releaseStock does NOT throw on failure —
+                                 it is a compensation call, logs ERROR instead.
+  - Exceptions (product):
+      ProductNotFoundException.java
+      ProductServiceException.java
+      ProductServiceUnavailableException.java
+  - Exceptions (inventory):
+      InventoryNotFoundException.java
+      InsufficientStockException.java
+      InventoryConflictException.java
+      InventoryValidationException.java
+      InventoryServiceException.java
+      InventoryServiceUnavailableException.java
+  - application.yml updated      connect-timeout-ms: 3000
+                                 read-timeout-ms: 5000
+
+  -----------------------------------------------------------------------
+
+  Phase 4 — POST /api/orders (Orchestration, Error Handling, OpenAPI, Tests)  [COMPLETED]
+  ---------------------------------------------------------------------------
+  Goal: Full order placement flow end to end. Compensation on save failure.
+        All errors return consistent JSON. Swagger UI live. All tests pass.
+
+  Files created:
+  - InactiveProductException.java   thrown when product.status != "ACTIVE"
+  - OrderService.java               orchestrates all 5 steps + compensation:
+                                    getProduct -> validate ACTIVE ->
+                                    reserveStock -> calculate -> save.
+                                    catch(Exception) -> releaseStock -> rethrow.
+  - OrderController.java            POST /api/orders -> 201 Created.
+                                    Full @Operation/@ApiResponses annotations.
+  - CorrelationIdFilter.java        OncePerRequestFilter @Order(1).
+                                    Reads X-Correlation-ID or generates UUID.
+                                    MDC.put("correlationId"). Clears in finally.
+                                    Echoes ID in response header.
+  - ErrorResponse.java              timestamp, status, error, message,
+                                    correlationId. @JsonInclude(NON_NULL).
+  - GlobalExceptionHandler.java     @RestControllerAdvice. Maps all 10 typed
+                                    exceptions. Reads MDC correlationId for
+                                    every error response.
+  - OpenApiConfig.java              OpenAPI bean + OperationCustomizer adds
+                                    X-Correlation-ID optional header to every
+                                    operation.
+  - application-test.yml            H2 in-memory (MODE=PostgreSQL), port 0,
+                                    ddl-auto: validate, Flyway enabled,
+                                    service URLs overridden by @DynamicPropertySource.
+  - OrderServiceTest.java           12 Mockito unit tests:
+                                    happy path, correlationId from MDC,
+                                    product not found (no inventory call),
+                                    product inactive (no inventory call),
+                                    product discontinued, product-service down,
+                                    insufficient stock (no save),
+                                    inventory not found, inventory conflict,
+                                    save fails -> compensation + rethrow,
+                                    save fails + compensation fails -> original
+                                    exception still propagates,
+                                    price calculation (19.99x3=59.97).
+  - OrderControllerIntegrationTest.java  17 WireMock integration tests:
+                                    happy path 201, correlationId echoed,
+                                    correlationId generated when absent,
+                                    correlationId forwarded to downstream (verify),
+                                    missing productId->400, missing quantity->400,
+                                    quantity=0->400, negative quantity->400,
+                                    product 404->404, product inactive->422,
+                                    product 503->503, product 500->502,
+                                    insufficient stock->422, inventory 409->409,
+                                    inventory 503->503, inventory 500->502,
+                                    error response shape validation.
+
+  Fixes applied during this phase:
+  - @Qualifier + Lombok bug: @Qualifier on @RequiredArgsConstructor field is
+    NOT picked up by Spring. Fixed ProductClient and InventoryClient by
+    replacing Lombok constructor with explicit constructor taking
+    @Qualifier("productRestClient") / @Qualifier("inventoryRestClient").
+  - WireMock + MockMvc import clash: WireMock.* static import conflicts with
+    MockMvcRequestBuilders.post(). Fixed by removing the static import and
+    using MockMvcRequestBuilders.post(...) explicitly.
+  - Java 25 / Byte Buddy: Mockito bundled with Spring Boot 3.3.0 only supports
+    up to Java 23. Fixed by adding -Dnet.bytebuddy.experimental=true to
+    Surefire plugin argLine in order-service/pom.xml.
+
+  Test results: 29/29 pass (12 unit + 17 integration).
+
+  -----------------------------------------------------------------------
+
+  Phase 5 — End-to-End Testing with Postman                      [PENDING]
+  ------------------------------------------
+  Goal: Full flow tested manually with all three services running.
+        All error scenarios verified.
+
+  No new files. Test scenarios:
+  1. Happy path — product active, stock available -> 201
+  2. Product not found -> 404
+  3. Product inactive -> 422
+  4. Insufficient stock -> 422
+  5. product-service down -> 503
+  6. inventory-service down -> 503
+  7. Concurrent orders -> 409 from inventory, propagated correctly
+  8. Verify correlationId appears in response body and header
+  9. Verify correlationId forwarded in product-service and inventory-service logs
+
+
+--------------------------------------------------------------------------------
+10. WHAT YOU LEARN FROM EVERY PHASE
+--------------------------------------------------------------------------------
+
+  Phase 1 — Snapshot Data Ownership and Local Transaction Boundary
+  -----------------------------------------------------------------
+  Storing productName and unitPrice in order_db is not a boundary violation —
+  it is deliberate denormalization. These are facts of the transaction at that
+  moment. If the product is renamed or repriced later, the order history stays
+  correct. This is the difference between a live reference and a historical record.
+
+  The @Transactional annotation on OrderService methods wraps only order_db
+  operations. The stock reservation in inventory_db is a completely separate
+  transaction. There is no distributed transaction. This is the fundamental
+  constraint of microservices: local atomicity within each service, eventual
+  consistency across services.
+
+  Order entity stores productId as a plain UUID — no @ManyToOne, no foreign key,
+  no import of the Product class. Cross-service references use IDs only.
+
+  Phase 2 — Client DTOs vs Shared DTOs
+  --------------------------------------
+  order-service defines its own ProductClientResponse and StockClientResponse
+  instead of importing DTOs from product-service or inventory-service.
+  order-service depends only on the HTTP contract (JSON shape), not on compiled
+  code from other services. If product-service adds a field, order-service is
+  unaffected. This is the correct way to consume another service's API.
+  Importing another service's DTO creates compile-time coupling — the services
+  can no longer be built and deployed independently.
+
+  Phase 3 — RestClient and Timeouts
+  -----------------------------------
+  Connection timeout: protects against a service that is completely unreachable.
+  Read timeout: protects against a service that accepts the connection but never
+  responds. Without timeouts, one slow downstream service can exhaust all threads
+  in order-service. Spring Boot 3.2+ RestClient is the modern replacement for
+  RestTemplate. It is fluent, synchronous, and does not require extra dependencies.
+
+  Phase 4 — Orchestration, Compensation, and Correlation ID
+  -----------------------------------------------------------
+  order-service is the orchestrator — it calls two downstream services in
+  sequence and makes decisions based on their responses. Basic compensation
+  (release stock on save failure) is the simplest form of distributed error
+  recovery. It is not a full Saga — it only compensates the last step. The
+  order of operations matters: always validate the product before reserving
+  stock. Never reserve stock for an inactive product.
+
+  MDC (Mapped Diagnostic Context) is a thread-local map that SLF4J uses to
+  attach context to every log line. It is the standard way to propagate
+  per-request data (like a correlation ID) through a service without polluting
+  every method signature with an extra parameter.
+
+  order-service must never leak internal service names, stack traces, or raw
+  downstream error messages to its callers. GlobalExceptionHandler translates
+  every exception into order-service's own error language. The correlationId
+  is read from MDC inside the exception handler and included in every error
+  response so the caller can trace the failure.
+
+  Documentation generated from code annotations stays in sync with the
+  implementation. Swagger UI lets you test endpoints directly from the browser.
+
+  Phase 5 — Observability Basics (Postman / Manual)
+  ---------------------------------------------------
+  Correlation IDs are the simplest form of distributed tracing. When something
+  goes wrong, search all three service logs for the same correlation ID and see
+  the exact chain of calls that led to the failure. This is the manual version
+  of what Zipkin and Jaeger automate. Understanding the manual version first
+  makes the automated tools much easier to understand.
+
+
+--------------------------------------------------------------------------------
+11. KEY DESIGN DECISIONS FOR INTERVIEWS
+--------------------------------------------------------------------------------
+
+  Q: Why does order-service store productName?
+  A: Because at order time, the name and price are facts of that transaction.
+     If the product is renamed later, the order history must still show what
+     the customer ordered. This is intentional denormalization — a snapshot,
+     not a live reference.
+
+  Q: Why does order-service not import ProductResponse from product-service?
+  A: Because that would create a compile-time dependency between two services.
+     If product-service changes its DTO, order-service would fail to compile.
+     Client DTOs (ProductClientResponse) depend only on the JSON contract,
+     not on compiled code.
+
+  Q: Why release stock when order save fails?
+  A: Because stock was already reserved in inventory-service (a separate
+     transaction in a separate database). If order-service's database write
+     fails, the reservation is orphaned — stock is held but no order exists.
+     Releasing it returns the stock to available. This is a compensating
+     transaction.
+
+  Q: Why is this not a full Saga?
+  A: A full Saga would also compensate the product-service call. In this
+     project, the product-service call is read-only (GET), so there is nothing
+     to compensate. Only the inventory reservation needs compensation.
+     A full Saga also requires Kafka/RabbitMQ or an orchestrator framework —
+     out of scope for the synchronous-communication project.
+
+  Q: Why can't @Qualifier be used on a Lombok @RequiredArgsConstructor field?
+  A: Lombok generates the constructor from field declarations. Spring's
+     @Qualifier annotation on a field is not transferred to the generated
+     constructor parameter by Lombok. Spring therefore cannot distinguish
+     which RestClient bean to inject. Fix: replace with an explicit constructor
+     and put @Qualifier on the constructor parameter directly.
+
+  Q: Why does WireMock conflict with MockMvc static imports?
+  A: WireMock.* exports a post() method for stubbing. MockMvcRequestBuilders
+     also exports a post() method for building requests. When both are statically
+     imported, the compiler cannot resolve which post() to call. Fix: remove
+     the MockMvcRequestBuilders static import and use the fully qualified
+     MockMvcRequestBuilders.post(...) call instead.
+
+  Q: What happens if the release call also fails?
+  A: The stock remains reserved with no corresponding order — a data
+     inconsistency. In production, this is handled by a background
+     reconciliation job or a Saga framework. This project acknowledges
+     the gap without solving it, which is the correct scope for a
+     learning project.
+
+  Q: What is the difference between connection timeout and read timeout?
+  A: Connection timeout fires when the TCP connection cannot be established
+     (server is down or unreachable). Read timeout fires when the connection
+     is established but the server does not send a response within the
+     configured time (server is slow or hung). Both must be configured.
+     Without them, a single slow downstream service can block all threads.
+
+  Q: What is MDC and why is it used for correlation IDs?
+  A: MDC (Mapped Diagnostic Context) is a thread-local map provided by SLF4J.
+     Values stored in MDC are automatically included in every log line when
+     the log pattern references them (%X{correlationId}). It is the standard
+     way to attach per-request context to logs without passing it as a method
+     parameter through every layer of the application.
+
+  Q: Why translate downstream errors instead of forwarding them?
+  A: Forwarding raw downstream errors leaks internal architecture details to
+     the client — they would see "inventory-service returned 422" instead of
+     a meaningful business message. Translation also decouples the client from
+     the internal service topology. If inventory-service is replaced by a
+     different service, the error messages to the client stay the same.
+
+
+--------------------------------------------------------------------------------
+12. PACKAGE STRUCTURE — order-service
+--------------------------------------------------------------------------------
+
+  order-service/
+  +-- pom.xml
+  +-- src/
+      +-- main/
+      |   +-- java/com/example/order/
+      |   |   +-- OrderServiceApplication.java
+      |   |   +-- domain/
+      |   |   |   +-- Order.java
+      |   |   |   +-- OrderStatus.java
+      |   |   +-- repository/
+      |   |   |   +-- OrderRepository.java
+      |   |   +-- service/
+      |   |   |   +-- OrderService.java
+      |   |   +-- controller/
+      |   |   |   +-- OrderController.java
+      |   |   +-- dto/
+      |   |   |   +-- CreateOrderRequest.java
+      |   |   |   +-- OrderResponse.java
+      |   |   |   +-- ProductClientResponse.java
+      |   |   |   +-- StockClientResponse.java
+      |   |   |   +-- ErrorResponse.java
+      |   |   +-- client/
+      |   |   |   +-- ProductClient.java
+      |   |   |   +-- InventoryClient.java
+      |   |   +-- config/
+      |   |   |   +-- RestClientConfig.java
+      |   |   |   +-- OpenApiConfig.java
+      |   |   +-- filter/
+      |   |   |   +-- CorrelationIdFilter.java
+      |   |   +-- exception/
+      |   |       +-- InactiveProductException.java
+      |   |       +-- ProductNotFoundException.java
+      |   |       +-- ProductServiceException.java
+      |   |       +-- ProductServiceUnavailableException.java
+      |   |       +-- InventoryNotFoundException.java
+      |   |       +-- InsufficientStockException.java
+      |   |       +-- InventoryConflictException.java
+      |   |       +-- InventoryValidationException.java
+      |   |       +-- InventoryServiceException.java
+      |   |       +-- InventoryServiceUnavailableException.java
+      |   |       +-- GlobalExceptionHandler.java
+      |   +-- resources/
+      |       +-- application.yml
+      |       +-- db/migration/
+      |           +-- V1__create_orders_table.sql
+      +-- test/
+          +-- java/com/example/order/
+          |   +-- service/
+          |   |   +-- OrderServiceTest.java
+          |   +-- controller/
+          |       +-- OrderControllerIntegrationTest.java
+          +-- resources/
+              +-- application-test.yml
+
+
+--------------------------------------------------------------------------------
+13. DEPENDENCIES — order-service pom.xml
+--------------------------------------------------------------------------------
+
+  Dependency                              Scope    Purpose
+  --------------------------------------  -------  ------------------------------------
+  spring-boot-starter-web                 compile  REST controllers, RestClient
+  spring-boot-starter-data-jpa            compile  JPA / Hibernate ORM
+  spring-boot-starter-validation          compile  @Valid, @NotNull, @Min on DTOs
+  postgresql                              runtime  JDBC driver
+  flyway-core                             compile  Versioned SQL migrations
+  flyway-database-postgresql              compile  Required by Flyway 10+ for PostgreSQL
+  lombok                                  compile  @Getter, @Setter, explicit constructors
+  springdoc-openapi-starter-webmvc-ui     compile  Swagger UI + OpenAPI 3 docs (2.5.0)
+  spring-boot-starter-test                test     JUnit 5 + Mockito
+  wiremock-standalone                     test     HTTP mock server for integration tests (3.5.4)
+  h2                                      test     In-memory DB for integration tests
+
+  Surefire plugin — argLine: -Dnet.bytebuddy.experimental=true
+  Required because Mockito's bundled Byte Buddy (via Spring Boot 3.3.0)
+  only supports up to Java 23. This flag enables Java 25 compatibility.
+
+
+--------------------------------------------------------------------------------
+14. HTTP STATUS CODES USED IN THIS PROJECT
+--------------------------------------------------------------------------------
+
+  Code  Meaning                  When Used
+  ----  -----------------------  -----------------------------------------------
+  200   OK                       GET /api/orders/{id}
+  201   Created                  POST /api/orders — order successfully placed
+  400   Bad Request              @Valid fails — missing productId, quantity < 1
+  404   Not Found                Product not found, order not found
+  409   Conflict                 Concurrent stock reservation conflict
+  422   Unprocessable Entity     Product inactive, insufficient stock,
+                                 no inventory record
+  503   Service Unavailable      product-service or inventory-service is down
+  500   Internal Server Error    Unexpected error (order save fails after
+                                 compensation attempt)
+
+
+================================================================================
+  END OF BLUEPRINT
+================================================================================

@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+// The Java package where generated classes will be placed.
+// Must match the package structure of product-service.
+option java_package = "com.example.product.grpc";
+
+// Generate one Java file per message/service instead of one giant file.
+option java_multiple_files = true;
+
+// The outer class name wrapping all generated classes (used internally by protoc).
+option java_outer_classname = "ProductProto";
+
+// The package name used in the gRPC service registry.
+package product;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERVICE DEFINITION
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// This is the contract. Both the server (product-service) and the client
+// (order-service) are generated from this exact file.
+// If this file changes, both sides must be regenerated and redeployed.
+//
+// rpc = one remote procedure call
+// GetProduct takes a GetProductRequest and returns a GetProductResponse.
+// ─────────────────────────────────────────────────────────────────────────────
+service ProductService {
+  rpc GetProduct (GetProductRequest) returns (GetProductResponse);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MESSAGES
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Each field has a type, a name, and a field number.
+// Field numbers are used in the binary encoding — they never change once set.
+// Adding new fields is safe (old clients ignore unknown fields).
+// Removing or renumbering fields breaks the contract.
+// ─────────────────────────────────────────────────────────────────────────────
+
+message GetProductRequest {
+  // UUID sent as a plain string — protobuf has no native UUID type.
+  string product_id = 1;
+}
+
+message GetProductResponse {
+  string id     = 1;
+  string name   = 2;
+  // price as string to avoid floating-point precision issues.
+  // The client parses it to BigDecimal.
+  string price  = 3;
+  string status = 4;
+}

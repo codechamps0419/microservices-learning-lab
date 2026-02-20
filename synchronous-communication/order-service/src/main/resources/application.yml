@@ -1,0 +1,67 @@
+server:
+  port: 8083
+  servlet:
+    context-path: /api
+
+spring:
+  application:
+    name: order-service
+
+  datasource:
+    # order_db must be created manually in PostgreSQL before first startup.
+    # Command: CREATE DATABASE order_db;
+    url: jdbc:postgresql://localhost:5432/order_db
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      # validate — Hibernate checks that entity mappings match the existing schema
+      # but makes NO changes. Flyway is responsible for all schema changes.
+      # NEVER use create or create-drop in production — they cause data loss.
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+# Downstream service configuration — used by ProductClient and InventoryClient.
+# All values are externalised here so they can be changed per environment
+# without recompiling. Override in production via environment variables:
+#   SERVICES_PRODUCT-SERVICE_URL=http://product-service:8081
+services:
+  product-service:
+    url: http://localhost:8081
+  inventory-service:
+    url: http://localhost:8082
+  # Connection timeout: milliseconds to wait for TCP connection to be established.
+  # If the downstream service is down, this is how long order-service waits
+  # before throwing ProductServiceUnavailableException / InventoryServiceUnavailableException.
+  connect-timeout-ms: 3000
+  # Read timeout: milliseconds to wait for a response after the connection is open.
+  # If the downstream service is slow or hung, this releases the thread.
+  # Without this, a slow downstream service exhausts order-service's thread pool.
+  read-timeout-ms: 5000
+
+logging:
+  pattern:
+    # %X{correlationId} reads from MDC — populated by CorrelationIdFilter.
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%X{correlationId}] %-5level %logger{36} - %msg%n"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# gRPC CLIENT — order-service calls product-service via gRPC
+# ─────────────────────────────────────────────────────────────────────────────
+# grpc.client.<name>.address must match the @GrpcClient("<name>") annotation.
+# static:// means a fixed address (no service discovery).
+# negotiationType=PLAINTEXT — no TLS, suitable for local development.
+grpc:
+  client:
+    product-service:
+      address: static://localhost:9091
+      negotiation-type: plaintext

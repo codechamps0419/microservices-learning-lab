@@ -1,0 +1,228 @@
+Before running Concurrency Test - execute below script using psql shell (PostgreSQL)
+-------------------------------------------------------------------------------------
+
+postgres=# create database inventory_test_db;
+CREATE DATABASE
+
+
+IDE Logs:
+==========
+
+Note: Before running the service, change value for showSQL to true or false in application.yml file
+To avoid printing SQL Hibernate Queries on console, change show-sql property value to false
+(show-sql : false)
+
+PS H:\Learn Microservices\service-boundaries\inventory-service> mvn clean install
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -------------------< com.example:inventory-service >--------------------
+[INFO] Building inventory-service 1.0.0
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- clean:3.3.2:clean (default-clean) @ inventory-service ---
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ inventory-service ---
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ inventory-service ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 11 source files with javac [debug parameters release 21] to target\classes
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit
+WARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ inventory-service ---
+[INFO] skip non existing resourceDirectory H:\Learn Microservices\service-boundaries\inventory-service\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ inventory-service ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 1 source file with javac [debug parameters release 21] to target\test-classes
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ inventory-service ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running com.example.inventory.service.InventoryConcurrencyTest
+18:41:55.125 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.example.inventory.service.InventoryConcurrencyTest]: InventoryConcurrencyTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+18:41:55.235 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.example.inventory.InventoryServiceApplication for test class com.example.inventory.service.InventoryConcurrencyTest
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.3.0)
+
+2026-02-16T18:41:55.657+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : Starting InventoryConcurrencyTest using Java 25.0.2 with PID 17392 (started by hrush in H:\Learn Microservices\service-boundaries\inventory-service)
+2026-02-16T18:41:55.658+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : No active profile set, falling back to 1 default profile: "default"
+2026-02-16T18:41:56.271+05:30  INFO 17392 --- [inventory-service] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-02-16T18:41:56.328+05:30  INFO 17392 --- [inventory-service] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 47 ms. Found 1 JPA repository interface.
+2026-02-16T18:41:56.857+05:30  INFO 17392 --- [inventory-service] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-02-16T18:41:57.107+05:30  INFO 17392 --- [inventory-service] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@7a65a360
+2026-02-16T18:41:57.115+05:30  INFO 17392 --- [inventory-service] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-02-16T18:41:57.159+05:30  INFO 17392 --- [inventory-service] [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://localhost:5432/inventory_test_db (PostgreSQL 16.14)
+2026-02-16T18:41:57.236+05:30  INFO 17392 --- [inventory-service] [           main] o.f.core.internal.command.DbValidate     : Successfully validated 1 migration (execution time 00:00.037s)
+2026-02-16T18:41:57.269+05:30  INFO 17392 --- [inventory-service] [           main] o.f.core.internal.command.DbMigrate      : Current version of schema "public": 1
+2026-02-16T18:41:57.273+05:30  INFO 17392 --- [inventory-service] [           main] o.f.core.internal.command.DbMigrate      : Schema "public" is up to date. No migration necessary.
+2026-02-16T18:41:57.388+05:30  INFO 17392 --- [inventory-service] [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-02-16T18:41:57.485+05:30  INFO 17392 --- [inventory-service] [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.5.2.Final
+2026-02-16T18:41:57.537+05:30  INFO 17392 --- [inventory-service] [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-02-16T18:41:57.821+05:30  INFO 17392 --- [inventory-service] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-02-16T18:41:57.901+05:30  WARN 17392 --- [inventory-service] [           main] org.hibernate.orm.deprecation            : HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-02-16T18:41:58.632+05:30  INFO 17392 --- [inventory-service] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-02-16T18:41:58.736+05:30  INFO 17392 --- [inventory-service] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by org.apache.tomcat.jni.Library in an unnamed module (file:/C:/Users/hrush/.m2/repository/org/apache/tomcat/embed/tomcat-embed-core/10.1.24/tomcat-embed-core-10.1.24.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+2026-02-16T18:41:59.178+05:30  WARN 17392 --- [inventory-service] [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-02-16T18:41:59.572+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : Started InventoryConcurrencyTest in 4.188 seconds (process running for 5.037)
+Java HotSpot(TM) 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+WARNING: A Java agent has been loaded dynamically (C:\Users\hrush\.m2\repository\net\bytebuddy\byte-buddy-agent\1.14.16\byte-buddy-agent-1.14.16.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+2026-02-16T18:41:59.853+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : 
+============================================================
+2026-02-16T18:41:59.854+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : SETUP STARTED | thread=main | productId=628f6be8-5811-43eb-8d86-9897dd26f61f
+2026-02-16T18:42:00.035+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : SETUP COMPLETED | productId=628f6be8-5811-43eb-8d86-9897dd26f61f | available=10 | reserved=0
+2026-02-16T18:42:00.035+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : ============================================================
+2026-02-16T18:42:00.037+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : TEST 2 STARTED | 5 concurrent reservations of 3 units; only 10 available
+2026-02-16T18:42:00.053+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : TEST 2 INITIAL STOCK | productId=628f6be8-5811-43eb-8d86-9897dd26f61f | available=10 | reserved=0
+2026-02-16T18:42:00.054+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : TEST 2 | releasing all 5 threads
+2026-02-16T18:42:00.055+05:30  INFO 17392 --- [inventory-service] [pool-2-thread-3] c.e.i.service.InventoryConcurrencyTest   : TEST 2 | task=3 | thread=pool-2-thread-3 | waiting at start gate
+2026-02-16T18:42:00.055+05:30  INFO 17392 --- [inventory-service] [pool-2-thread-3] c.e.i.service.InventoryConcurrencyTest   : TEST 2 | task=3 | thread=pool-2-thread-3 | calling reserveStock(quantity=3)
+2026-02-16T18:42:00.055+05:30  INFO 17392 --- [inventory-service] [pool-2-thread-2] c.e.i.service.InventoryConcurrencyTest   : TEST 2 | task=2 | thread=pool-2-thread-2 | waiting at start gate
+2026-02-16T18:42:00.055+05:30  INFO 17392 --- [inventory-service] [pool-2-thread-2] c.e.i.service.InventoryConcurrencyTest   : TEST 2 | task=2 | thread=pool-2-thread-2 | calling reserveStock(quantity=3)
+2026-02-16T18:42:00.056+05:30  INFO 17392 --- [inventory-service] [pool-2-thread-4] c.e.i.service.InventoryConcurrencyTest   : TEST 2 | task=4 | thread=pool-2-thread-4 | waiting at start gate
+2026-02-16T18:42:00.056+05:30  INFO 17392 --- [inventory-service] [pool-2-thread-4] c.e.i.service.InventoryConcurrencyTest   : TEST 2 | task=4 | thread=pool-2-thread-4 | calling reserveStock(quantity=3)
+2026-02-16T18:42:00.055+05:30  INFO 17392 --- [inventory-service] [pool-2-thread-5] c.e.i.service.InventoryConcurrencyTest   : TEST 2 | task=5 | thread=pool-2-thread-5 | waiting at start gate
+2026-02-16T18:42:00.056+05:30  INFO 17392 --- [inventory-service] [pool-2-thread-5] c.e.i.service.InventoryConcurrencyTest   : TEST 2 | task=5 | thread=pool-2-thread-5 | calling reserveStock(quantity=3)
+2026-02-16T18:42:00.056+05:30  INFO 17392 --- [inventory-service] [pool-2-thread-1] c.e.i.service.InventoryConcurrencyTest   : TEST 2 | task=1 | thread=pool-2-thread-1 | waiting at start gate
+2026-02-16T18:42:00.056+05:30  INFO 17392 --- [inventory-service] [pool-2-thread-1] c.e.i.service.InventoryConcurrencyTest   : TEST 2 | task=1 | thread=pool-2-thread-1 | calling reserveStock(quantity=3)
+2026-02-16T18:42:00.090+05:30  INFO 17392 --- [inventory-service] [pool-2-thread-4] c.e.i.service.InventoryConcurrencyTest   : TEST 2 | task=4 | SUCCESS | available=7 | reserved=3
+2026-02-16T18:42:00.090+05:30  INFO 17392 --- [inventory-service] [pool-2-thread-4] c.e.i.service.InventoryConcurrencyTest   : TEST 2 | task=4 | finished | remainingTasks=4
+2026-02-16T18:42:00.108+05:30  WARN 17392 --- [inventory-service] [pool-2-thread-5] c.e.i.service.InventoryConcurrencyTest   : TEST 2 | task=5 | FAILED | exception=ObjectOptimisticLockingFailureException | message=Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [com.example.inventory.domain.Inventory#f7f73d0b-a4ef-4036-a8bb-751132754183]
+2026-02-16T18:42:00.108+05:30  INFO 17392 --- [inventory-service] [pool-2-thread-5] c.e.i.service.InventoryConcurrencyTest   : TEST 2 | task=5 | finished | remainingTasks=3
+2026-02-16T18:42:00.108+05:30  WARN 17392 --- [inventory-service] [pool-2-thread-3] c.e.i.service.InventoryConcurrencyTest   : TEST 2 | task=3 | FAILED | exception=ObjectOptimisticLockingFailureException | message=Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [com.example.inventory.domain.Inventory#f7f73d0b-a4ef-4036-a8bb-751132754183]
+2026-02-16T18:42:00.109+05:30  INFO 17392 --- [inventory-service] [pool-2-thread-3] c.e.i.service.InventoryConcurrencyTest   : TEST 2 | task=3 | finished | remainingTasks=2
+2026-02-16T18:42:00.109+05:30  WARN 17392 --- [inventory-service] [pool-2-thread-2] c.e.i.service.InventoryConcurrencyTest   : TEST 2 | task=2 | FAILED | exception=ObjectOptimisticLockingFailureException | message=Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [com.example.inventory.domain.Inventory#f7f73d0b-a4ef-4036-a8bb-751132754183]
+2026-02-16T18:42:00.109+05:30  INFO 17392 --- [inventory-service] [pool-2-thread-2] c.e.i.service.InventoryConcurrencyTest   : TEST 2 | task=2 | finished | remainingTasks=1
+2026-02-16T18:42:00.112+05:30  WARN 17392 --- [inventory-service] [pool-2-thread-1] c.e.i.service.InventoryConcurrencyTest   : TEST 2 | task=1 | FAILED | exception=ObjectOptimisticLockingFailureException | message=Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [com.example.inventory.domain.Inventory#f7f73d0b-a4ef-4036-a8bb-751132754183]
+2026-02-16T18:42:00.112+05:30  INFO 17392 --- [inventory-service] [pool-2-thread-1] c.e.i.service.InventoryConcurrencyTest   : TEST 2 | task=1 | finished | remainingTasks=0
+2026-02-16T18:42:00.112+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : TEST 2 | all threads completed within timeout=true
+2026-02-16T18:42:00.185+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : TEST 2 FINAL STOCK | productId=628f6be8-5811-43eb-8d86-9897dd26f61f | available=7 | reserved=3
+2026-02-16T18:42:00.185+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : TEST 2 SUMMARY | failures=4 | requestedTotal=15 | initialAvailable=10
+2026-02-16T18:42:00.207+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : TEST 2 PASSED | stock never became negative
+2026-02-16T18:42:00.223+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : 
+============================================================
+2026-02-16T18:42:00.223+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : SETUP STARTED | thread=main | productId=1ba896a0-4827-486e-8bb2-a45424ea5d7b
+2026-02-16T18:42:00.234+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : SETUP COMPLETED | productId=1ba896a0-4827-486e-8bb2-a45424ea5d7b | available=10 | reserved=0
+2026-02-16T18:42:00.235+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : ============================================================
+2026-02-16T18:42:00.235+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : TEST 1 STARTED | 10 concurrent reservations of 1 unit
+2026-02-16T18:42:00.242+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : TEST 1 INITIAL STOCK | productId=1ba896a0-4827-486e-8bb2-a45424ea5d7b | available=10 | reserved=0
+2026-02-16T18:42:00.245+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | releasing all 10 threads
+2026-02-16T18:42:00.245+05:30  INFO 17392 --- [inventory-service] [pool-3-thread-3] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=3 | thread=pool-3-thread-3 | waiting at start gate
+2026-02-16T18:42:00.246+05:30  INFO 17392 --- [inventory-service] [pool-3-thread-4] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=4 | thread=pool-3-thread-4 | waiting at start gate
+2026-02-16T18:42:00.246+05:30  INFO 17392 --- [inventory-service] [pool-3-thread-3] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=3 | thread=pool-3-thread-3 | calling reserveStock(quantity=1)
+2026-02-16T18:42:00.246+05:30  INFO 17392 --- [inventory-service] [pool-3-thread-5] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=5 | thread=pool-3-thread-5 | waiting at start gate
+2026-02-16T18:42:00.246+05:30  INFO 17392 --- [inventory-service] [pool-3-thread-5] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=5 | thread=pool-3-thread-5 | calling reserveStock(quantity=1)
+2026-02-16T18:42:00.245+05:30  INFO 17392 --- [inventory-service] [pool-3-thread-2] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=2 | thread=pool-3-thread-2 | waiting at start gate
+2026-02-16T18:42:00.245+05:30  INFO 17392 --- [inventory-service] [pool-3-thread-1] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=1 | thread=pool-3-thread-1 | waiting at start gate
+2026-02-16T18:42:00.246+05:30  INFO 17392 --- [inventory-service] [pool-3-thread-4] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=4 | thread=pool-3-thread-4 | calling reserveStock(quantity=1)
+2026-02-16T18:42:00.247+05:30  INFO 17392 --- [inventory-service] [ool-3-thread-10] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=10 | thread=pool-3-thread-10 | waiting at start gate
+2026-02-16T18:42:00.247+05:30  INFO 17392 --- [inventory-service] [ool-3-thread-10] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=10 | thread=pool-3-thread-10 | calling reserveStock(quantity=1)
+2026-02-16T18:42:00.246+05:30  INFO 17392 --- [inventory-service] [pool-3-thread-2] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=2 | thread=pool-3-thread-2 | calling reserveStock(quantity=1)
+2026-02-16T18:42:00.246+05:30  INFO 17392 --- [inventory-service] [pool-3-thread-6] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=6 | thread=pool-3-thread-6 | waiting at start gate
+2026-02-16T18:42:00.247+05:30  INFO 17392 --- [inventory-service] [pool-3-thread-6] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=6 | thread=pool-3-thread-6 | calling reserveStock(quantity=1)
+2026-02-16T18:42:00.247+05:30  INFO 17392 --- [inventory-service] [pool-3-thread-1] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=1 | thread=pool-3-thread-1 | calling reserveStock(quantity=1)
+2026-02-16T18:42:00.247+05:30  INFO 17392 --- [inventory-service] [pool-3-thread-8] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=8 | thread=pool-3-thread-8 | waiting at start gate
+2026-02-16T18:42:00.248+05:30  INFO 17392 --- [inventory-service] [pool-3-thread-8] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=8 | thread=pool-3-thread-8 | calling reserveStock(quantity=1)
+2026-02-16T18:42:00.247+05:30  INFO 17392 --- [inventory-service] [pool-3-thread-9] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=9 | thread=pool-3-thread-9 | waiting at start gate
+2026-02-16T18:42:00.248+05:30  INFO 17392 --- [inventory-service] [pool-3-thread-9] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=9 | thread=pool-3-thread-9 | calling reserveStock(quantity=1)
+2026-02-16T18:42:00.247+05:30  INFO 17392 --- [inventory-service] [pool-3-thread-7] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=7 | thread=pool-3-thread-7 | waiting at start gate
+2026-02-16T18:42:00.249+05:30  INFO 17392 --- [inventory-service] [pool-3-thread-7] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=7 | thread=pool-3-thread-7 | calling reserveStock(quantity=1)
+2026-02-16T18:42:00.258+05:30  INFO 17392 --- [inventory-service] [pool-3-thread-3] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=3 | SUCCESS | available=9 | reserved=1 | totalSuccess=1
+2026-02-16T18:42:00.258+05:30  INFO 17392 --- [inventory-service] [pool-3-thread-3] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=3 | finished | remainingTasks=9
+2026-02-16T18:42:00.262+05:30  WARN 17392 --- [inventory-service] [pool-3-thread-2] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=2 | FAILED | exception=ObjectOptimisticLockingFailureException | message=Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [com.example.inventory.domain.Inventory#af9dbb9a-efe2-4386-85d6-cc488e9daa04] | totalFailure=3
+2026-02-16T18:42:00.262+05:30  WARN 17392 --- [inventory-service] [pool-3-thread-6] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=6 | FAILED | exception=ObjectOptimisticLockingFailureException | message=Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [com.example.inventory.domain.Inventory#af9dbb9a-efe2-4386-85d6-cc488e9daa04] | totalFailure=1
+2026-02-16T18:42:00.262+05:30  WARN 17392 --- [inventory-service] [ool-3-thread-10] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=10 | FAILED | exception=ObjectOptimisticLockingFailureException | message=Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [com.example.inventory.domain.Inventory#af9dbb9a-efe2-4386-85d6-cc488e9daa04] | totalFailure=2
+2026-02-16T18:42:00.262+05:30  INFO 17392 --- [inventory-service] [pool-3-thread-2] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=2 | finished | remainingTasks=8
+2026-02-16T18:42:00.262+05:30  WARN 17392 --- [inventory-service] [pool-3-thread-7] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=7 | FAILED | exception=ObjectOptimisticLockingFailureException | message=Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [com.example.inventory.domain.Inventory#af9dbb9a-efe2-4386-85d6-cc488e9daa04] | totalFailure=4
+2026-02-16T18:42:00.263+05:30  INFO 17392 --- [inventory-service] [ool-3-thread-10] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=10 | finished | remainingTasks=6
+2026-02-16T18:42:00.263+05:30  INFO 17392 --- [inventory-service] [pool-3-thread-6] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=6 | finished | remainingTasks=7
+2026-02-16T18:42:00.263+05:30  INFO 17392 --- [inventory-service] [pool-3-thread-7] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=7 | finished | remainingTasks=5
+2026-02-16T18:42:00.265+05:30  WARN 17392 --- [inventory-service] [pool-3-thread-4] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=4 | FAILED | exception=ObjectOptimisticLockingFailureException | message=Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [com.example.inventory.domain.Inventory#af9dbb9a-efe2-4386-85d6-cc488e9daa04] | totalFailure=7
+2026-02-16T18:42:00.265+05:30  INFO 17392 --- [inventory-service] [pool-3-thread-4] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=4 | finished | remainingTasks=4
+2026-02-16T18:42:00.265+05:30  WARN 17392 --- [inventory-service] [pool-3-thread-8] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=8 | FAILED | exception=ObjectOptimisticLockingFailureException | message=Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [com.example.inventory.domain.Inventory#af9dbb9a-efe2-4386-85d6-cc488e9daa04] | totalFailure=6
+2026-02-16T18:42:00.266+05:30  WARN 17392 --- [inventory-service] [pool-3-thread-5] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=5 | FAILED | exception=ObjectOptimisticLockingFailureException | message=Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [com.example.inventory.domain.Inventory#af9dbb9a-efe2-4386-85d6-cc488e9daa04] | totalFailure=8
+2026-02-16T18:42:00.265+05:30  WARN 17392 --- [inventory-service] [pool-3-thread-1] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=1 | FAILED | exception=ObjectOptimisticLockingFailureException | message=Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [com.example.inventory.domain.Inventory#af9dbb9a-efe2-4386-85d6-cc488e9daa04] | totalFailure=5
+2026-02-16T18:42:00.266+05:30  INFO 17392 --- [inventory-service] [pool-3-thread-8] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=8 | finished | remainingTasks=3
+2026-02-16T18:42:00.266+05:30  INFO 17392 --- [inventory-service] [pool-3-thread-5] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=5 | finished | remainingTasks=2
+2026-02-16T18:42:00.266+05:30  INFO 17392 --- [inventory-service] [pool-3-thread-1] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=1 | finished | remainingTasks=1
+2026-02-16T18:42:00.269+05:30  INFO 17392 --- [inventory-service] [pool-3-thread-9] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=9 | SUCCESS | available=8 | reserved=2 | totalSuccess=2
+2026-02-16T18:42:00.269+05:30  INFO 17392 --- [inventory-service] [pool-3-thread-9] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | task=9 | finished | remainingTasks=0
+2026-02-16T18:42:00.269+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : TEST 1 | all threads completed within timeout=true
+2026-02-16T18:42:00.274+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : TEST 1 FINAL STOCK | productId=1ba896a0-4827-486e-8bb2-a45424ea5d7b | available=8 | reserved=2
+2026-02-16T18:42:00.275+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : TEST 1 SUMMARY | success=2 | failure=8 | total=10
+2026-02-16T18:42:00.275+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : TEST 1 PASSED | no overselling detected
+2026-02-16T18:42:00.280+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : 
+============================================================
+2026-02-16T18:42:00.280+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : SETUP STARTED | thread=main | productId=e1551d1e-d5d7-4061-9fa0-9d62322cc2e0
+2026-02-16T18:42:00.289+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : SETUP COMPLETED | productId=e1551d1e-d5d7-4061-9fa0-9d62322cc2e0 | available=10 | reserved=0
+2026-02-16T18:42:00.290+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : ============================================================
+2026-02-16T18:42:00.290+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : TEST 3 STARTED | sequential stock lifecycle
+2026-02-16T18:42:00.295+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : TEST 3 INITIAL STOCK | productId=e1551d1e-d5d7-4061-9fa0-9d62322cc2e0 | available=10 | reserved=0
+2026-02-16T18:42:00.296+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : TEST 3 | STEP 1 | reserve 3 units
+2026-02-16T18:42:00.305+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : TEST 3 AFTER RESERVE | productId=e1551d1e-d5d7-4061-9fa0-9d62322cc2e0 | available=7 | reserved=3
+2026-02-16T18:42:00.305+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : TEST 3 | STEP 2 | release 3 reserved units
+2026-02-16T18:42:00.317+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : TEST 3 AFTER RELEASE | productId=e1551d1e-d5d7-4061-9fa0-9d62322cc2e0 | available=10 | reserved=0
+2026-02-16T18:42:00.317+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : TEST 3 | STEP 3 | reserve 3 units again
+2026-02-16T18:42:00.328+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : TEST 3 AFTER SECOND RESERVE | productId=e1551d1e-d5d7-4061-9fa0-9d62322cc2e0 | available=7 | reserved=3
+2026-02-16T18:42:00.328+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : TEST 3 | STEP 4 | confirm 3 reserved units
+2026-02-16T18:42:00.337+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : TEST 3 AFTER CONFIRM | productId=e1551d1e-d5d7-4061-9fa0-9d62322cc2e0 | available=7 | reserved=0
+2026-02-16T18:42:00.337+05:30  INFO 17392 --- [inventory-service] [           main] c.e.i.service.InventoryConcurrencyTest   : TEST 3 PASSED | full stock lifecycle is correct
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 5.366 s -- in com.example.inventory.service.InventoryConcurrencyTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] 
+[INFO] --- jar:3.4.1:jar (default-jar) @ inventory-service ---
+[INFO] Building jar: H:\Learn Microservices\service-boundaries\inventory-service\target\inventory-service-1.0.0.jar
+[INFO] 
+[INFO] --- spring-boot:3.3.0:repackage (repackage) @ inventory-service ---
+[INFO] Replacing main artifact H:\Learn Microservices\service-boundaries\inventory-service\target\inventory-service-1.0.0.jar with repackaged archive, adding nested dependencies in BOOT-INF/.
+[INFO] The original artifact has been renamed to H:\Learn Microservices\service-boundaries\inventory-service\target\inventory-service-1.0.0.jar.original
+[INFO] 
+[INFO] --- install:3.1.2:install (default-install) @ inventory-service ---
+[INFO] Installing H:\Learn Microservices\service-boundaries\inventory-service\pom.xml to C:\Users\hrush\.m2\repository\com\example\inventory-service\1.0.0\inventory-service-1.0.0.pom
+[INFO] Installing H:\Learn Microservices\service-boundaries\inventory-service\target\inventory-service-1.0.0.jar to C:\Users\hrush\.m2\repository\com\example\inventory-service\1.0.0\inventory-service-1.0.0.jar
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  11.290 s
+[INFO] Finished at: 2026-02-16T18:42:01+05:30
+[INFO] ------------------------------------------------------------------------
+
+
+
+
+DB: (Concurrent Test Result - Unit Testing)
+============================================
+
+inventory_test_db=# select *from inventories;
+                  id                  |              product_id              | available_quantity | reserved_quantity | version |         updated_at        
+--------------------------------------+--------------------------------------+--------------------+-------------------+---------+----------------------------
+ f7f73d0b-a4ef-4036-a8bb-751132754183 | 628f6be8-5811-43eb-8d86-9897dd26f61f |                  7 |                 3 |       1 | 2026-02-16 18:42:00.063308 
+ af9dbb9a-efe2-4386-85d6-cc488e9daa04 | 1ba896a0-4827-486e-8bb2-a45424ea5d7b |                  8 |                 2 |       2 | 2026-02-16 18:42:00.261087 
+ c19ad82d-fb9a-4729-9632-0c24871fdb3b | e1551d1e-d5d7-4061-9fa0-9d62322cc2e0 |                  7 |                 0 |       4 | 2026-02-16 18:42:00.333235
+(3 rows)

@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+             https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+        <parent> points to our own parent POM, not Spring Boot directly.
+        Maven resolves the chain: this -> service-boundaries -> spring-boot-starter-parent.
+        That chain is how all dependency versions are inherited without repeating them here.
+    -->
+    <parent>
+        <groupId>com.example</groupId>
+        <artifactId>synchronous-communication</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <artifactId>product-service</artifactId>
+
+    <properties>
+        <java.version>25</java.version>
+    </properties>
+
+    <dependencies>
+
+        <!--
+            Provides: REST controllers, embedded Tomcat, Jackson (JSON),
+            and RestClient which we use in Phase 5 for cross-service calls.
+            No version tag needed — inherited from spring-boot-starter-parent.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- JPA / Hibernate — maps Java entity classes to DB tables -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!--
+            Enables @Valid on controller method parameters.
+            Without this, @NotBlank and @NotNull annotations on DTOs
+            are silently ignored — a very common production mistake.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!--
+            PostgreSQL JDBC driver.
+            scope=runtime: needed at runtime to connect to the DB,
+            but we never import any PostgreSQL class in our code directly.
+        -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!--
+            Flyway core engine — runs versioned SQL scripts from
+            src/main/resources/db/migration on every startup.
+            Tracks which scripts have already run in the
+            flyway_schema_history table so they are never re-executed.
+        -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+
+        <!--
+            Flyway 10+ requires an explicit database-specific module.
+            Without this, Flyway throws "No database found to handle..."
+            at startup even though the PostgreSQL driver is on the classpath.
+        -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+
+        <!--
+            Lombok generates boilerplate at compile time via annotation processing.
+            optional=true means this dependency is NOT passed down to modules
+            that depend on product-service.
+        -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- JUnit 5 + Mockito + Spring Test — used in Phase 6 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!--
+            grpc-spring-boot-starter auto-detects @GrpcService beans and starts
+            a gRPC server on grpc.server.port defined in application.yml.
+        -->
+        <dependency>
+            <groupId>net.devh</groupId>
+            <artifactId>grpc-spring-boot-starter</artifactId>
+            <version>3.1.0.RELEASE</version>
+        </dependency>
+
+        <!--
+            javax.annotation-api — required by protoc-generated gRPC stubs.
+            The generated ProductServiceGrpc.java uses @javax.annotation.Generated
+            which was removed from the JDK in Java 9+. This dependency restores it.
+        -->
+        <dependency>
+            <groupId>javax.annotation</groupId>
+            <artifactId>javax.annotation-api</artifactId>
+            <version>1.3.2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>javax.annotation</groupId>
+            <artifactId>javax.annotation-api</artifactId>
+            <version>1.3.2</version>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+            <!--
+                Java 21+ requires Lombok to be declared as an explicit annotation
+                processor. Without this, javac silently skips Lombok processing
+                and @Getter, @Setter, @RequiredArgsConstructor generate nothing.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+
+            <!--
+                Reads .proto files from src/main/proto and generates Java classes
+                into target/generated-sources/protobuf at compile time.
+                compile goal      — generates message classes (GetProductRequest etc.)
+                compile-custom    — generates gRPC service stubs (ProductServiceGrpc etc.)
+            -->
+            <plugin>
+                <groupId>org.xolstice.maven.plugins</groupId>
+                <artifactId>protobuf-maven-plugin</artifactId>
+                <version>0.6.1</version>
+                <configuration>
+                    <protocArtifact>com.google.protobuf:protoc:3.25.3:exe:${os.detected.classifier}</protocArtifact>
+                    <pluginId>grpc-java</pluginId>
+                    <pluginArtifact>io.grpc:protoc-gen-grpc-java:1.63.0:exe:${os.detected.classifier}</pluginArtifact>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>compile</goal>
+                            <goal>compile-custom</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+        </plugins>
+    </build>
+
+</project>

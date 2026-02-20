@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+             https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.example</groupId>
+    <artifactId>synchronous-communication</artifactId>
+    <version>1.0.0</version>
+
+    <!--
+        packaging=pom — this module produces no JAR.
+        Its only job is to declare shared configuration and list child modules.
+    -->
+    <packaging>pom</packaging>
+
+    <modules>
+        <module>product-service</module>
+        <module>inventory-service</module>
+        <module>order-service</module>
+    </modules>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.3.6</version>
+        <relativePath/>
+    </parent>
+
+    <properties>
+        <java.version>21</java.version>
+        <lombok.version>1.18.38</lombok.version>
+        <maven.compiler.release>21</maven.compiler.release>
+    </properties>
+
+    <build>
+        <extensions>
+            <!--
+                os-maven-plugin detects the current OS and architecture at build time
+                and exposes ${os.detected.classifier} (e.g. windows-x86_64, osx-x86_64).
+                Required by protobuf-maven-plugin to download the correct protoc binary.
+            -->
+            <extension>
+                <groupId>kr.motd.maven</groupId>
+                <artifactId>os-maven-plugin</artifactId>
+                <version>1.7.1</version>
+            </extension>
+        </extensions>
+    </build>
+
+</project>
