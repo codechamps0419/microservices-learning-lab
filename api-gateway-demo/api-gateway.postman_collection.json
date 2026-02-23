@@ -1,0 +1,1957 @@
+{
+  "info": {
+    "_postman_id": "e6a6ef2d-236c-4cee-8b5d-9128477ead32",
+    "name": "api-gateway",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "48418049",
+    "description": "Includes a complete API Gateway demonstration folder covering health, routes, routing, correlation IDs, CORS, rate limiting, unknown routes, downstream unavailability, and timeout behavior."
+  },
+  "item": [
+    {
+      "name": "product-service",
+      "item": [
+        {
+          "name": "01 Create Product (valid)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('Has UUID id', () => pm.expect(json.id).to.match(/^[0-9a-f-]{36}$/));",
+                  "pm.test('Status is ACTIVE', () => pm.expect(json.status).to.eql('ACTIVE'));",
+                  "pm.collectionVariables.set('product_id', json.id);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Wireless Keyboard\",\n  \"description\": \"Compact wireless keyboard with USB receiver\",\n  \"price\": 49.99,\n  \"category\": \"Electronics\"\n}"
+            },
+            "url": {
+              "raw": "{{product_base}}products",
+              "host": [
+                "{{product_base}}products"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "02 Create Product (duplicate name → 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Has conflict message', () => pm.expect(pm.response.json().message).to.include('already exists'));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Wireless Keyboard\",\n  \"price\": 29.99\n}"
+            },
+            "url": {
+              "raw": "{{product_base}}products",
+              "host": [
+                "{{product_base}}products"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "03 Create Product (missing name → 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Has errors object', () => pm.expect(pm.response.json()).to.have.property('errors'));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 49.99\n}"
+            },
+            "url": {
+              "raw": "{{product_base}}products",
+              "host": [
+                "{{product_base}}products"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "04 Create Product (price zero → 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Free Product\",\n  \"price\": 0.00\n}"
+            },
+            "url": {
+              "raw": "{{product_base}}products",
+              "host": [
+                "{{product_base}}products"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "05 Create Second Product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('product_id_2', pm.response.json().id);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"USB-C Hub\",\n  \"description\": \"7-in-1 USB-C hub\",\n  \"price\": 34.99,\n  \"category\": \"Electronics\"\n}"
+            },
+            "url": {
+              "raw": "{{product_base}}products",
+              "host": [
+                "{{product_base}}products"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "06 Get Product by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('ID matches', () => pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('product_id')));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "packages": {},
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{product_base}}products/d0633d9f-acf3-481d-93a3-a7186bf55cf6",
+              "host": [
+                "{{product_base}}products"
+              ],
+              "path": [
+                "d0633d9f-acf3-481d-93a3-a7186bf55cf6"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "07 Get Product (not found → 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{product_base}}products/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{product_base}}products"
+              ],
+              "path": [
+                "00000000-0000-0000-0000-000000000000"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "08 Search All Active Products",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{product_base}}products",
+              "host": [
+                "{{product_base}}products"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "09 Search by Category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{product_base}}products?category=Electronics",
+              "host": [
+                "{{product_base}}products"
+              ],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "Electronics"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "10 Search by Name Fragment",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{product_base}}products?name=keyboard",
+              "host": [
+                "{{product_base}}products"
+              ],
+              "query": [
+                {
+                  "key": "name",
+                  "value": "keyboard"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "11 Update Product (PUT)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Name updated', () => pm.expect(pm.response.json().name).to.eql('Wireless Keyboard Pro'));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Wireless Keyboard Pro\",\n  \"description\": \"Updated with USB-C receiver\",\n  \"price\": 59.99,\n  \"category\": \"Electronics\"\n}"
+            },
+            "url": {
+              "raw": "{{product_base}}products/d0633d9f-acf3-481d-93a3-a7186bf55cf6",
+              "host": [
+                "{{product_base}}products"
+              ],
+              "path": [
+                "d0633d9f-acf3-481d-93a3-a7186bf55cf6"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "12 Update Price (PATCH)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Price updated', () => pm.expect(pm.response.json().price).to.eql(44.99));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 44.99\n}"
+            },
+            "url": {
+              "raw": "{{product_base}}products/d0633d9f-acf3-481d-93a3-a7186bf55cf6/price",
+              "host": [
+                "{{product_base}}products"
+              ],
+              "path": [
+                "d0633d9f-acf3-481d-93a3-a7186bf55cf6",
+                "price"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "13 Deactivate Product (PATCH status)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Status is INACTIVE', () => pm.expect(pm.response.json().status).to.eql('INACTIVE'));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"INACTIVE\"\n}"
+            },
+            "url": {
+              "raw": "{{product_base}}products/d0633d9f-acf3-481d-93a3-a7186bf55cf6/status",
+              "host": [
+                "{{product_base}}products"
+              ],
+              "path": [
+                "d0633d9f-acf3-481d-93a3-a7186bf55cf6",
+                "status"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "14 Search — INACTIVE product not in results",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const ids = pm.response.json().map(p => p.id);",
+                  "pm.test('Inactive product excluded', () => pm.expect(ids).to.not.include(pm.collectionVariables.get('product_id')));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{product_base}}products",
+              "host": [
+                "{{product_base}}products"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "15 Reactivate Product",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ACTIVE\"\n}"
+            },
+            "url": {
+              "raw": "{{product_base}}products/d0633d9f-acf3-481d-93a3-a7186bf55cf6/status",
+              "host": [
+                "{{product_base}}products"
+              ],
+              "path": [
+                "d0633d9f-acf3-481d-93a3-a7186bf55cf6",
+                "status"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "16 Invalid Status Value → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"DELETED\"\n}"
+            },
+            "url": {
+              "raw": "{{product_base}}products/d0633d9f-acf3-481d-93a3-a7186bf55cf6/status",
+              "host": [
+                "{{product_base}}products"
+              ],
+              "path": [
+                "d0633d9f-acf3-481d-93a3-a7186bf55cf6",
+                "status"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "inventory-service",
+      "item": [
+        {
+          "name": "01 Add Stock (new product)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('Available is 100', () => pm.expect(json.availableQuantity).to.eql(100));",
+                  "pm.test('Reserved is 0', () => pm.expect(json.reservedQuantity).to.eql(0));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"e5fbbfb8-f7e3-450c-a01d-33cb3e45923c\",\n  \"quantity\": 100\n}"
+            },
+            "url": {
+              "raw": "{{inventory_base}}inventories",
+              "host": [
+                "{{inventory_base}}inventories"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "02 Restock (add more to existing)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Available is 150', () => pm.expect(pm.response.json().availableQuantity).to.eql(150));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"e5fbbfb8-f7e3-450c-a01d-33cb3e45923c\",\n  \"quantity\": 50\n}"
+            },
+            "url": {
+              "raw": "{{inventory_base}}inventories",
+              "host": [
+                "{{inventory_base}}inventories"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "03 Get Stock by Product ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has availableQuantity', () => pm.expect(pm.response.json()).to.have.property('availableQuantity'));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{inventory_base}}inventories/e5fbbfb8-f7e3-450c-a01d-33cb3e45923c",
+              "host": [
+                "{{inventory_base}}inventories"
+              ],
+              "path": [
+                "e5fbbfb8-f7e3-450c-a01d-33cb3e45923c"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "04 Reserve Stock",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Available decreased', () => pm.expect(json.availableQuantity).to.eql(140));",
+                  "pm.test('Reserved increased', () => pm.expect(json.reservedQuantity).to.eql(10));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 10\n}"
+            },
+            "url": {
+              "raw": "{{inventory_base}}inventories/e5fbbfb8-f7e3-450c-a01d-33cb3e45923c/reserve",
+              "host": [
+                "{{inventory_base}}inventories"
+              ],
+              "path": [
+                "e5fbbfb8-f7e3-450c-a01d-33cb3e45923c",
+                "reserve"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "05 Reserve Stock (insufficient → 422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 9999\n}"
+            },
+            "url": {
+              "raw": "{{inventory_base}}inventories/e5fbbfb8-f7e3-450c-a01d-33cb3e45923c/reserve",
+              "host": [
+                "{{inventory_base}}inventories"
+              ],
+              "path": [
+                "e5fbbfb8-f7e3-450c-a01d-33cb3e45923c",
+                "reserve"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "06 Release Stock",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Available restored', () => pm.expect(json.availableQuantity).to.eql(145));",
+                  "pm.test('Reserved decreased', () => pm.expect(json.reservedQuantity).to.eql(5));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 5\n}"
+            },
+            "url": {
+              "raw": "{{inventory_base}}inventories/e5fbbfb8-f7e3-450c-a01d-33cb3e45923c/release",
+              "host": [
+                "{{inventory_base}}inventories"
+              ],
+              "path": [
+                "e5fbbfb8-f7e3-450c-a01d-33cb3e45923c",
+                "release"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "07 Confirm Stock (deduct reserved)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Reserved cleared', () => pm.expect(json.reservedQuantity).to.eql(0));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 5\n}"
+            },
+            "url": {
+              "raw": "{{inventory_base}}inventories/e5fbbfb8-f7e3-450c-a01d-33cb3e45923c/confirm",
+              "host": [
+                "{{inventory_base}}inventories"
+              ],
+              "path": [
+                "e5fbbfb8-f7e3-450c-a01d-33cb3e45923c",
+                "confirm"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "08 Get Stock (not found → 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{inventory_base}}inventories/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{inventory_base}}inventories"
+              ],
+              "path": [
+                "00000000-0000-0000-0000-000000000000"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "order-service",
+      "item": [
+        {
+          "name": "01 Place Order (happy path → 201)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('Has orderId', () => pm.expect(json.orderId).to.match(/^[0-9a-f-]{36}$/));",
+                  "pm.test('Status is CONFIRMED', () => pm.expect(json.status).to.eql('CONFIRMED'));",
+                  "pm.test('Has productName', () => pm.expect(json.productName).to.be.a('string').and.not.empty);",
+                  "pm.test('Has totalPrice', () => pm.expect(json.totalPrice).to.be.a('number').and.above(0));",
+                  "pm.test('Has correlationId in body', () => pm.expect(json.correlationId).to.be.a('string').and.not.empty);",
+                  "pm.test('Has X-Correlation-ID header', () => pm.expect(pm.response.headers.get('X-Correlation-ID')).to.be.a('string').and.not.empty);",
+                  "pm.collectionVariables.set('order_id', json.orderId);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-ID",
+                "value": "postman-test-001",
+                "description": "Optional — send your own ID"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"quantity\": 2\n}"
+            },
+            "url": {
+              "raw": "{{order_base}}orders",
+              "host": [
+                "{{order_base}}orders"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "02 Place Order (correlationId echoed back)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('correlationId in body matches sent header', () => {\n  pm.expect(pm.response.json().correlationId).to.eql('my-trace-id-abc');\n});",
+                  "pm.test('X-Correlation-ID response header matches', () => {\n  pm.expect(pm.response.headers.get('X-Correlation-ID')).to.eql('my-trace-id-abc');\n});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-ID",
+                "value": "my-trace-id-abc"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"quantity\": 1\n}"
+            },
+            "url": {
+              "raw": "{{order_base}}orders",
+              "host": [
+                "{{order_base}}orders"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "03 Place Order (no correlationId header → auto-generated)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('correlationId auto-generated in body', () => {\n  pm.expect(pm.response.json().correlationId).to.match(/^[0-9a-f-]{36}$/);\n});",
+                  "pm.test('X-Correlation-ID header auto-generated', () => {\n  pm.expect(pm.response.headers.get('X-Correlation-ID')).to.match(/^[0-9a-f-]{36}$/);\n});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"quantity\": 1\n}"
+            },
+            "url": {
+              "raw": "{{order_base}}orders",
+              "host": [
+                "{{order_base}}orders"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "04 Place Order (price snapshot — totalPrice = unitPrice × quantity)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('totalPrice = unitPrice x quantity', () => {\n  const expected = Math.round(json.unitPrice * json.quantity * 100) / 100;\n  pm.expect(json.totalPrice).to.eql(expected);\n});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"quantity\": 3\n}"
+            },
+            "url": {
+              "raw": "{{order_base}}orders",
+              "host": [
+                "{{order_base}}orders"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "05 Place Order (missing productId → 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Has error body', () => {\n  const json = pm.response.json();\n  pm.expect(json.status).to.eql(400);\n  pm.expect(json.message).to.be.a('string');\n});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 2\n}"
+            },
+            "url": {
+              "raw": "{{order_base}}orders",
+              "host": [
+                "{{order_base}}orders"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "06 Place Order (quantity = 0 → 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"quantity\": 0\n}"
+            },
+            "url": {
+              "raw": "{{order_base}}orders",
+              "host": [
+                "{{order_base}}orders"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "07 Place Order (negative quantity → 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"quantity\": -1\n}"
+            },
+            "url": {
+              "raw": "{{order_base}}orders",
+              "host": [
+                "{{order_base}}orders"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "08 Place Order (product not found → 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Error shape valid', () => {\n  const json = pm.response.json();\n  pm.expect(json.status).to.eql(404);\n  pm.expect(json.timestamp).to.be.a('string');\n  pm.expect(json.correlationId).to.be.a('string');\n});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"00000000-0000-0000-0000-000000000000\",\n  \"quantity\": 2\n}"
+            },
+            "url": {
+              "raw": "{{order_base}}orders",
+              "host": [
+                "{{order_base}}orders"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "09 Place Order (product INACTIVE → 422)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// First deactivate the product via product-service, then run this request.",
+                  "// PATCH {{product_base}}products/{{product_id}}/status  body: {\"status\":\"INACTIVE\"}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error shape valid', () => {\n  const json = pm.response.json();\n  pm.expect(json.status).to.eql(422);\n  pm.expect(json.correlationId).to.be.a('string');\n});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"quantity\": 2\n}"
+            },
+            "url": {
+              "raw": "{{order_base}}orders",
+              "host": [
+                "{{order_base}}orders"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "10 Place Order (insufficient stock → 422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error shape valid', () => {\n  const json = pm.response.json();\n  pm.expect(json.status).to.eql(422);\n  pm.expect(json.correlationId).to.be.a('string');\n});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"quantity\": 999999\n}"
+            },
+            "url": {
+              "raw": "{{order_base}}orders",
+              "host": [
+                "{{order_base}}orders"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "11 Place Order (no inventory record → 422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Use a product_id that exists in product-service but has NO inventory record.",
+                  "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{product_id_2}}\",\n  \"quantity\": 1\n}"
+            },
+            "url": {
+              "raw": "{{order_base}}orders",
+              "host": [
+                "{{order_base}}orders"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "12 Place Order (product-service down → 503)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Stop product-service (port 8081) before running this request."
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 503', () => pm.response.to.have.status(503));",
+                  "pm.test('Error shape valid', () => {\n  const json = pm.response.json();\n  pm.expect(json.status).to.eql(503);\n  pm.expect(json.correlationId).to.be.a('string');\n});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"quantity\": 2\n}"
+            },
+            "url": {
+              "raw": "{{order_base}}orders",
+              "host": [
+                "{{order_base}}orders"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "13 Place Order (inventory-service down → 503)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Stop inventory-service (port 8082) before running this request."
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 503', () => pm.response.to.have.status(503));",
+                  "pm.test('Error shape valid', () => {\n  const json = pm.response.json();\n  pm.expect(json.status).to.eql(503);\n  pm.expect(json.correlationId).to.be.a('string');\n});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"quantity\": 2\n}"
+            },
+            "url": {
+              "raw": "{{order_base}}orders",
+              "host": [
+                "{{order_base}}orders"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "14 Error response shape (timestamp + status + error + message + correlationId)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));",
+                  "const json = pm.response.json();",
+                  "pm.test('Has timestamp', () => pm.expect(json.timestamp).to.be.a('string').and.not.empty);",
+                  "pm.test('Has status', () => pm.expect(json.status).to.eql(404));",
+                  "pm.test('Has error', () => pm.expect(json.error).to.be.a('string').and.not.empty);",
+                  "pm.test('Has message', () => pm.expect(json.message).to.be.a('string').and.not.empty);",
+                  "pm.test('Has correlationId', () => pm.expect(json.correlationId).to.be.a('string').and.not.empty);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-ID",
+                "value": "shape-check-001"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"00000000-0000-0000-0000-000000000000\",\n  \"quantity\": 1\n}"
+            },
+            "url": {
+              "raw": "{{order_base}}orders",
+              "host": [
+                "{{order_base}}orders"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "API Gateway",
+      "description": "Complete API Gateway demonstration suite. Start Product Service (8081), Inventory Service (8082), Order Service (8083), and API Gateway (8080). Run requests in numeric order. Some failure tests require temporarily stopping or slowing a downstream service as described in each request.",
+      "item": [
+        {
+          "name": "01 - Gateway Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway_base}}/actuator/health",
+              "host": [
+                "{{gateway_base}}"
+              ],
+              "path": [
+                "actuator",
+                "health"
+              ]
+            },
+            "description": "Confirms that the API Gateway application is running on port 8080."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 returned', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Gateway health is UP', () => pm.expect(body.status).to.eql('UP'));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "02 - Registered Gateway Routes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway_base}}/actuator/gateway/routes",
+              "host": [
+                "{{gateway_base}}"
+              ],
+              "path": [
+                "actuator",
+                "gateway",
+                "routes"
+              ]
+            },
+            "description": "Verifies that Product, Inventory, and Order routes are registered. Requires management.endpoint.gateway.access=read-only and the gateway Actuator endpoint to be exposed."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 returned', () => pm.response.to.have.status(200));",
+                  "const routes = pm.response.json();",
+                  "const routeIds = routes.map(r => r.route_id || r.routeId || r.id);",
+                  "pm.test('Product route exists', () => pm.expect(routeIds).to.include('product-service-route'));",
+                  "pm.test('Inventory route exists', () => pm.expect(routeIds).to.include('inventory-service-route'));",
+                  "pm.test('Order route exists', () => pm.expect(routeIds).to.include('order-service-route'));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "03 - Product Routing Through Gateway",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway_base}}/api/products/{{product_id}}",
+              "host": [
+                "{{gateway_base}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "{{product_id}}"
+              ]
+            },
+            "description": "Calls Product Service through port 8080. Run the existing Create Product request first so product_id is populated."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Product request is routed successfully', () => pm.response.to.have.status(200));",
+                  "pm.test('Gateway returns X-Correlation-ID', () => {",
+                  "  pm.expect(pm.response.headers.has('X-Correlation-ID')).to.be.true;",
+                  "});",
+                  "const generatedId = pm.response.headers.get('X-Correlation-ID');",
+                  "pm.collectionVariables.set('generated_correlation_id', generatedId);",
+                  "const body = pm.response.json();",
+                  "pm.test('Correct product returned', () => pm.expect(body.id).to.eql(pm.collectionVariables.get('product_id')));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "04 - Preserve Provided Correlation ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway_base}}/api/products/{{product_id}}",
+              "host": [
+                "{{gateway_base}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "{{product_id}}"
+              ]
+            },
+            "description": "Sends a known correlation ID and verifies that the Gateway preserves the same value in the response."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 returned', () => pm.response.to.have.status(200));",
+                  "pm.test('Provided correlation ID is preserved', () => {",
+                  "  pm.expect(pm.response.headers.get('X-Correlation-ID'))",
+                  "    .to.eql(pm.collectionVariables.get('correlation_id'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "05 - Inventory Routing Through Gateway",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway_base}}/api/inventory/{{product_id}}",
+              "host": [
+                "{{gateway_base}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "{{product_id}}"
+              ]
+            },
+            "description": "Calls Inventory Service through the Gateway. Create or initialize inventory for product_id before running when required by your API."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Inventory route did not return Gateway 404', () => pm.expect(pm.response.code).not.eql(404));",
+                  "pm.test('Correlation ID is returned', () => {",
+                  "  pm.expect(pm.response.headers.get('X-Correlation-ID'))",
+                  "    .to.eql(pm.collectionVariables.get('correlation_id'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "06 - Order Routing Through Gateway",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{gateway_base}}/api/orders",
+              "host": [
+                "{{gateway_base}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ]
+            },
+            "description": "Creates an order through the Gateway. Product must exist, be active, and have available inventory."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Request reached Order Service', () => {",
+                  "  pm.expect([200, 201, 400, 404, 409, 422]).to.include(pm.response.code);",
+                  "});",
+                  "pm.test('Correlation ID is returned', () => {",
+                  "  pm.expect(pm.response.headers.get('X-Correlation-ID'))",
+                  "    .to.eql(pm.collectionVariables.get('correlation_id'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "07 - CORS Preflight",
+          "request": {
+            "method": "OPTIONS",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "http://localhost:3000",
+                "type": "text"
+              },
+              {
+                "key": "Access-Control-Request-Method",
+                "value": "POST",
+                "type": "text"
+              },
+              {
+                "key": "Access-Control-Request-Headers",
+                "value": "Content-Type,X-Correlation-ID",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway_base}}/api/orders",
+              "host": [
+                "{{gateway_base}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ]
+            },
+            "description": "Simulates the browser CORS preflight request for POST /api/orders."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('CORS preflight succeeds', () => pm.expect([200, 204]).to.include(pm.response.code));",
+                  "pm.test('Allow-Origin header exists', () => pm.expect(pm.response.headers.has('Access-Control-Allow-Origin')).to.be.true);",
+                  "pm.test('POST is allowed', () => {",
+                  "  const methods = pm.response.headers.get('Access-Control-Allow-Methods') || '';",
+                  "  pm.expect(methods).to.include('POST');",
+                  "});",
+                  "pm.test('Correlation header is allowed', () => {",
+                  "  const headers = pm.response.headers.get('Access-Control-Allow-Headers') || '';",
+                  "  pm.expect(headers.toLowerCase()).to.include('x-correlation-id');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "08 - Rate Limit Demo - Run 12 Iterations",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-Correlation-ID",
+                "value": "rate-limit-test-{{$guid}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{gateway_base}}/api/orders",
+              "host": [
+                "{{gateway_base}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ]
+            },
+            "description": "Use Collection Runner and run this request 12 times within 60 seconds. The first requests may return Order Service business responses. Once the configured Gateway limit is exceeded, HTTP 429 must appear. Wait for the rate-limit window to reset before repeating."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const iteration = typeof pm.info.iteration === 'number' ? pm.info.iteration + 1 : 1;",
+                  "console.log(`Rate-limit iteration ${iteration}, status ${pm.response.code}`);",
+                  "if (iteration <= Number(pm.collectionVariables.get('rate_limit_requests'))) {",
+                  "  pm.test('Request is not rejected before configured limit', () => {",
+                  "    pm.expect(pm.response.code).not.eql(429);",
+                  "  });",
+                  "} else {",
+                  "  pm.test('Gateway returns 429 after configured limit', () => pm.response.to.have.status(429));",
+                  "  pm.test('Rate-limit error code is returned', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.eql('ORDER_RATE_LIMIT_EXCEEDED');",
+                  "  });",
+                  "}",
+                  "pm.test('Rate-limit headers are present when implemented', () => {",
+                  "  if (pm.response.code === 429) {",
+                  "    pm.expect(pm.response.headers.has('X-RateLimit-Limit')).to.be.true;",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "09 - Unknown Route Returns 404",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway_base}}/api/payments",
+              "host": [
+                "{{gateway_base}}"
+              ],
+              "path": [
+                "api",
+                "payments"
+              ]
+            },
+            "description": "Verifies that an unconfigured route is rejected with HTTP 404."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Unknown Gateway route returns 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "10 - Downstream Unavailable Returns 503",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway_base}}/api/products/{{product_id}}",
+              "host": [
+                "{{gateway_base}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "{{product_id}}"
+              ]
+            },
+            "description": "MANUAL FAILURE TEST: Stop Product Service on port 8081 while keeping the Gateway running. Run this request and expect the Gateway's standard 503 response. Restart Product Service after testing."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Gateway returns 503', () => pm.response.to.have.status(503));",
+                  "const body = pm.response.json();",
+                  "pm.test('Standard unavailable code is returned', () => pm.expect(body.code).to.eql('DOWNSTREAM_SERVICE_UNAVAILABLE'));",
+                  "pm.test('Correlation ID is included', () => pm.expect(body.correlationId).to.exist);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "11 - Downstream Timeout Returns 504",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway_base}}/api/products/{{product_id}}",
+              "host": [
+                "{{gateway_base}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "{{product_id}}"
+              ]
+            },
+            "description": "MANUAL TIMEOUT TEST: Temporarily add a delay longer than 5 seconds to the Product endpoint, or point PRODUCT_SERVICE_URL to a deliberately slow test server. Run this request and expect HTTP 504. Remove the delay afterward."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Gateway returns 504', () => pm.response.to.have.status(504));",
+                  "const body = pm.response.json();",
+                  "pm.test('Standard timeout code is returned', () => pm.expect(body.code).to.eql('DOWNSTREAM_SERVICE_TIMEOUT'));",
+                  "pm.test('Correlation ID is included', () => pm.expect(body.correlationId).to.exist);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "gateway_base",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "product_base",
+      "value": "http://localhost:8081/api/"
+    },
+    {
+      "key": "inventory_base",
+      "value": "http://localhost:8082/api/"
+    },
+    {
+      "key": "order_base",
+      "value": "http://localhost:8083/api/"
+    },
+    {
+      "key": "product_id",
+      "value": ""
+    },
+    {
+      "key": "product_id_2",
+      "value": ""
+    },
+    {
+      "key": "order_id",
+      "value": ""
+    },
+    {
+      "key": "correlation_id",
+      "value": "postman-gateway-test-001"
+    },
+    {
+      "key": "rate_limit_requests",
+      "value": "10"
+    },
+    {
+      "key": "rate_limit_window_seconds",
+      "value": "60"
+    }
+  ]
+}

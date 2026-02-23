@@ -1,0 +1,47 @@
+# Test profile — overrides application.yml for integration tests.
+#
+# KEY DIFFERENCES FROM application.yml:
+#
+# 1. H2 in-memory database replaces PostgreSQL.
+#    Tests run without a real database server.
+#    Flyway runs the same V1__create_orders_table.sql migration against H2.
+#
+# 2. ddl-auto: validate — same as production.
+#    Flyway creates the schema; Hibernate validates it. No shortcuts in tests.
+#
+# 3. services.product-service.url and services.inventory-service.url are
+#    overridden at test time by WireMock's dynamic port.
+#    These placeholder values are never actually used — each test class
+#    sets the real WireMock URL via @DynamicPropertySource.
+#
+# 4. show-sql: false — reduces test output noise.
+
+server:
+  port: 0  # random port — avoids conflicts when running tests in parallel
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:order_test_db;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+services:
+  product-service:
+    url: http://localhost:0   # overridden by @DynamicPropertySource in tests
+  inventory-service:
+    url: http://localhost:0   # overridden by @DynamicPropertySource in tests
+  connect-timeout-ms: 1000
+  read-timeout-ms: 2000

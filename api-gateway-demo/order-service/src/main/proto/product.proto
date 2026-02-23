@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+// Generated classes land in order-service's own package.
+// order-service never imports compiled classes from product-service —
+// it only shares the .proto contract file.
+option java_package = "com.example.order.grpc";
+
+option java_multiple_files = true;
+option java_outer_classname = "ProductProto";
+
+package product;
+
+service ProductService {
+  rpc GetProduct (GetProductRequest) returns (GetProductResponse);
+}
+
+message GetProductRequest {
+  string product_id = 1;
+}
+
+message GetProductResponse {
+  string id     = 1;
+  string name   = 2;
+  string price  = 3;
+  string status = 4;
+}

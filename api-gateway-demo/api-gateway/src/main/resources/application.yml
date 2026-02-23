@@ -1,0 +1,103 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  cloud:
+    gateway:
+      server:
+        webflux:
+
+          routes:
+            - id: product-service-route
+              uri: ${PRODUCT_SERVICE_URL:http://localhost:8081}
+              predicates:
+                - Path=/api/products/**
+              metadata:
+                connect-timeout: 2000
+                response-timeout: 5000
+
+            - id: inventory-service-route
+              uri: ${INVENTORY_SERVICE_URL:http://localhost:8082}
+              predicates:
+                - Path=/api/inventories/**
+              metadata:
+                connect-timeout: 2000
+                response-timeout: 5000
+
+            - id: order-service-route
+              uri: ${ORDER_SERVICE_URL:http://localhost:8083}
+              predicates:
+                - Path=/api/orders/**
+              metadata:
+                connect-timeout: 2000
+                response-timeout: 8000
+
+          httpclient:
+            connect-timeout: 2000
+            response-timeout: 8s
+
+          globalcors:
+            add-to-simple-url-handler-mapping: true
+
+            cors-configurations:
+              '[/**]':
+                allowed-origin-patterns:
+                  - ${GATEWAY_ALLOWED_ORIGIN:http://localhost:*}
+
+                allowed-methods:
+                  - GET
+                  - POST
+                  - PUT
+                  - PATCH
+                  - DELETE
+                  - OPTIONS
+
+                allowed-headers:
+                  - Content-Type
+                  - Accept
+                  - X-Correlation-ID
+
+                exposed-headers:
+                  - X-Correlation-ID
+                  - X-RateLimit-Limit
+                  - X-RateLimit-Remaining
+                  - X-RateLimit-Reset
+
+                allow-credentials: true
+                max-age: 3600
+
+gateway:
+  rate-limit:
+    orders:
+      requests-per-window: ${ORDER_RATE_LIMIT_REQUESTS:10}
+      window: ${ORDER_RATE_LIMIT_WINDOW:60s}
+
+management:
+  endpoint:
+    gateway:
+      access: read-only
+
+  endpoints:
+    web:
+      exposure:
+        include:
+          - health
+          - info
+          - gateway
+
+logging:
+  pattern:
+    console: >-
+      %d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX}
+      level=%-5level
+      service=${spring.application.name}
+      correlationId=%X{correlationId:-none}
+      logger=%logger{36}
+      message="%msg"%n
+
+  level:
+    com.example.gateway: INFO
+    org.springframework.cloud.gateway: INFO
