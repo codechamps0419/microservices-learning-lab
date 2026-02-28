@@ -1,0 +1,23 @@
+server:
+  port: 0
+spring:
+  datasource:
+    url: jdbc:h2:mem:product_test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password: test
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  flyway:
+    enabled: false
+app:
+  database:
+    url: jdbc:h2:mem:product_test
+    username: sa
+    password: test
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false

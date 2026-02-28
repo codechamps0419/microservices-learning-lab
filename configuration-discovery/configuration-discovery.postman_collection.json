@@ -1,0 +1,85 @@
+{
+  "info": {
+    "name": "04 Configuration Discovery",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "discovery_server_url",
+      "value": "http://localhost:8761"
+    },
+    {
+      "key": "product_instance_1_url",
+      "value": "http://localhost:8081"
+    },
+    {
+      "key": "product_instance_2_url",
+      "value": "http://localhost:8084"
+    },
+    {
+      "key": "order_service_url",
+      "value": "http://localhost:8083"
+    }
+  ],
+  "item": [
+    {
+      "name": "Project 4 - Configuration and Discovery",
+      "item": [
+        {
+          "name": "Product Instance 8081 Info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{product_instance_1_url}}/api/products/instance-info"
+          },
+          "response": []
+        },
+        {
+          "name": "Product Instance 8084 Info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{product_instance_2_url}}/api/products/instance-info"
+          },
+          "response": []
+        },
+        {
+          "name": "Order Load Balanced Discovery",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{order_service_url}}/api/orders/discovery-demo"
+          },
+          "response": []
+        },
+        {
+          "name": "Product 8081 Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{product_instance_1_url}}/api/actuator/health"
+          },
+          "response": []
+        },
+        {
+          "name": "Product 8084 Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{product_instance_2_url}}/api/actuator/health"
+          },
+          "response": []
+        },
+        {
+          "name": "Order Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{order_service_url}}/api/actuator/health"
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

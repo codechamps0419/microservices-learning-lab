@@ -1,0 +1,16 @@
+# Discovery Server
+EUREKA_SERVER_URL=http://localhost:8761/eureka/
+
+# Product instance 1
+SERVER_PORT=8081
+PRODUCT_DB_URL=jdbc:postgresql://localhost:5432/product_db
+PRODUCT_DB_USERNAME=postgres
+PRODUCT_DB_PASSWORD=<set-locally>
+
+# Product instance 2 uses SERVER_PORT=8084 with the same service-owned DB variables.
+
+# Order Service
+ORDER_DB_URL=jdbc:postgresql://localhost:5432/order_db
+ORDER_DB_USERNAME=postgres
+ORDER_DB_PASSWORD=<set-locally>
+PRODUCT_SERVICE_NAME=product-service
